@@ -20,10 +20,13 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Instalar unzip
         run: sudo apt-get update && sudo apt-get install -y unzip
 
-      -       - name: Descomprimir proyecto Android
+      - name: Descomprimir proyecto Android
         run: |
           rm -rf extracted
           mkdir extracted
@@ -37,13 +40,13 @@ jobs:
           echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
           echo "Proyecto encontrado en: $PROJECT_DIR"
 
-      - name: Dar permiso a Gradle
-        run: chmod +x "$PROJECT_DIR/gradlew"
+      - name: Instalar Gradle
+        uses: gradle/actions/setup-gradle@v4
 
-      - name: Compilar APK
+      - name: Compilar APK debug
         run: |
           cd "$PROJECT_DIR"
-          ./gradlew assembleDebug
+          gradle assembleDebug
 
       - name: Subir APK generado
         uses: actions/upload-artifact@v4
