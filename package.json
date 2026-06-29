@@ -1,0 +1,15 @@
+{
+  "name": "explora-pago-home-cierre-demanda",
+  "version": "2.5.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "npm run validate && npm run syntax && node tests/financial-core.test.mjs && node tests/derivation-dashboard.test.mjs && node tests/mi-auto.test.mjs && node tests/driver-incidents.test.mjs && node tests/driver-incidents-visual-regression.test.mjs && node tests/editable-vehicle-incidents.test.mjs && node tests/dashboard-vehicle-modules.test.mjs && node tests/vehicle-menu-content.test.mjs && node tests/daily-ranking-bonus.test.mjs && node tests/fixed-fifty-participation.test.mjs && node tests/real-cash-reconciliation.test.mjs && node tests/weekly-summary-render-fields.test.mjs && node tests/manual-payment-receipts.test.mjs && node tests/weekly-plaque-carousel.test.mjs && npm run test:mileage",
+    "validate": "node tools/validate-project.mjs",
+    "syntax": "bash tools/check-syntax.sh",
+    "serve": "python3 -m http.server 8080",
+    "test:admin-production": "node tests/admin-driver-production.test.cjs",
+    "test:release": "npm run syntax && npm run test:admin-production && node tests/financial-core.test.mjs && node tests/derivation-dashboard.test.mjs && node tests/mi-auto.test.mjs && node tests/driver-incidents.test.mjs && node tests/dashboard-vehicle-modules.test.mjs && node tests/vehicle-menu-content.test.mjs && node tests/daily-ranking-bonus.test.mjs && node tests/fixed-fifty-participation.test.mjs && node tests/real-cash-reconciliation.test.mjs && node tests/weekly-summary-render-fields.test.mjs && node tests/manual-payment-receipts.test.mjs && node tests/weekly-plaque-carousel.test.mjs",
+    "test:mileage": "node tests/weekly-mileage-v15.session-isolation.test.mjs"
+  }
+}

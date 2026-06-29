@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+
+<!--
+  Este documento usa el modo `daily-winners` para activar el carrusel de burbujas
+  con los ganadores diarios. La regla CSS que ocultaba las burbujas en este
+  modo se ha comentado en `css/segments/45-style.css`, por lo que el
+  carrusel permanecerá visible.
+-->
+<html data-explora-build="2.5.0-pay-home" lang="es" data-performance-nav-mode="daily-winners">
+<head>
+<meta charset="utf-8"/>
+<meta content="v2.5.0-pay-home-on-demand-closure" name="explora-version"/>
+<meta content="v2.4.5-admin-dashboard-visual-reorganization" name="explora-ui-feature"/>
+<meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
+<meta content="#000000" name="theme-color">
+<meta content="yes" name="apple-mobile-web-app-capable">
+<meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"/>
+<title>EXPLORA — Gestión del vehículo</title>
+<meta content="EXPLORA" name="application-name"/>
+<meta content="EXPLORA" name="apple-mobile-web-app-title"/>
+<meta content="yes" name="mobile-web-app-capable"/>
+<meta content="telephone=no" name="format-detection"/>
+<link href="manifest.webmanifest?v=2411" rel="manifest"/>
+<link href="icons/apple-touch-icon-v2411.png" rel="apple-touch-icon" sizes="180x180"/>
+<link href="icons/favicon-v2411.svg" rel="icon" type="image/svg+xml"/>
+<link href="icons/favicon-32-v2411.png" rel="icon" sizes="32x32" type="image/png"/>
+
+<link href="css/segments/01-style.css" rel="stylesheet"/>
+<link href="css/segments/02-style.css" rel="stylesheet"/>
+<link href="css/segments/03-style.css" rel="stylesheet"/>
+<link href="css/segments/04-style.css" rel="stylesheet"/>
+<link href="css/segments/05-style.css" rel="stylesheet"/>
+<link href="css/segments/06-style.css" rel="stylesheet"/>
+<link href="css/segments/07-style.css?v=250-receipt-guidance" rel="stylesheet"/>
+<link href="css/segments/08-style.css" rel="stylesheet"/>
+<link href="css/segments/09-style.css" rel="stylesheet"/>
+<link href="css/segments/10-style.css?v=243-closure" rel="stylesheet"/>
+<link href="css/segments/11-style.css" rel="stylesheet"/>
+<link href="css/segments/12-style.css" rel="stylesheet"/>
+<link href="css/segments/13-style.css" rel="stylesheet"/>
+<link href="css/segments/14-style.css" rel="stylesheet"/>
+<link href="css/segments/15-style.css" rel="stylesheet"/>
+<link href="css/segments/16-style.css" rel="stylesheet"/>
+<link href="css/segments/17-style.css" rel="stylesheet"/>
+<link href="css/segments/18-style.css" rel="stylesheet"/>
+<link href="css/segments/19-style.css" rel="stylesheet"/>
+<link href="css/segments/20-style.css" rel="stylesheet"/>
+<link href="css/segments/21-style.css" rel="stylesheet"/>
+<link href="css/segments/22-style.css" rel="stylesheet"/>
+<link href="css/segments/23-style.css" rel="stylesheet"/><script id="explora-weekly-period-registry" src="js/segments/01-script.js?v2442-weekly-payment-production" type="module"></script>
+<link href="css/segments/24-style.css" rel="stylesheet"/>
+<link href="css/segments/25-style.css" rel="stylesheet"/>
+<link href="css/segments/26-style.css" rel="stylesheet"/>
+<link href="css/segments/27-style.css" rel="stylesheet"/>
+<link href="css/segments/28-style.css?v=225" rel="stylesheet"/>
+<link href="css/segments/29-style.css" rel="stylesheet"/>
+<link href="css/segments/30-style.css" rel="stylesheet"/>
+<link href="css/segments/31-style.css" rel="stylesheet"/>
+</meta></meta><meta content="modular-compatibility-layer-v1" name="explora-architecture"/><meta content="v2.4.43-weekly-production-integrity" name="explora-project-version"/></head>
+<body class="explora-auth-checking">
+<div aria-live="polite" class="explora-splash" id="exploraSplash" role="status">
+<div class="explora-splash-logo">
+<img alt="EXPLORA" class="explora-splash-brand-image" decoding="async" src="icons/explora-logo-horizontal-v2411.png"/>
+<div class="explora-splash-sub">VIAJES Y SERVICIOS</div>
+</div>
+</div>
+<section aria-hidden="true" aria-label="Ingresar a EXPLORA" class="explora-login" id="exploraLogin">
+<form class="explora-login-card" id="exploraLoginForm" novalidate="">
+<div class="explora-login-brand">
+<img alt="EXPLORA" class="explora-login-brand-image" decoding="async" src="icons/explora-logo-horizontal-v2411.png"/>
+<p>VIAJES Y SERVICIOS</p>
+</div>
+<div class="explora-login-field">
+<label for="exploraLoginUsername">Usuario</label>
+<input autocapitalize="none" autocomplete="username" id="exploraLoginUsername" inputmode="text" placeholder="marcelo" required="" spellcheck="false" type="text"/>
+</div>
+<div class="explora-login-field">
+<label for="exploraLoginPassword">Contraseña</label>
+<div class="explora-password-wrap">
+<input autocomplete="current-password" id="exploraLoginPassword" placeholder="••••••••" required="" type="password"/>
+<button aria-label="Mostrar u ocultar contraseña" class="explora-password-toggle" id="exploraPasswordToggle" type="button">Ver</button>
+</div>
+</div>
+<button class="explora-login-submit" id="exploraLoginSubmit" type="submit">Ingresar</button>
+<div aria-live="polite" class="explora-login-msg" id="exploraLoginMsg"></div>
+</form>
+</section>
+<div aria-hidden="true" class="explora-role-block" id="exploraRoleBlock">
+<div class="explora-role-card">
+<h2>Esta versión corresponde al módulo Chofer.</h2>
+<p>Tu usuario no está habilitado para esta interfaz.</p>
+<button id="exploraRoleLogout" type="button">Salir</button>
+</div>
+</div>
+<section aria-hidden="true" aria-label="Agregar chofer" class="admin-modal" id="adminCreateDriverModal">
+<div aria-labelledby="adminCreateDriverTitle" aria-modal="true" class="admin-modal-panel" role="dialog">
+<header class="admin-modal-header">
+<button aria-label="Cerrar" id="adminCreateCloseBtn" type="button">‹</button>
+<div><h2 id="adminCreateDriverTitle">Crear acceso de chofer</h2><p>Crea el usuario, la contraseña y el perfil operativo en Firebase.</p></div>
+</header>
+<form class="admin-create-form" id="adminCreateDriverForm" novalidate="">
+<fieldset>
+<legend>Datos del chofer</legend>
+<label for="newDriverName">Nombre completo
+            <input autocomplete="name" id="newDriverName" maxlength="100" placeholder="Nombre y apellido" required=""/>
+</label>
+<label for="newDriverUsername">ID de acceso
+            <input autocapitalize="none" autocomplete="username" id="newDriverUsername" maxlength="32" placeholder="ejemplo: ariel" required="" spellcheck="false"/>
+</label>
+<label for="newDriverPassword">Contraseña inicial
+            <input autocomplete="new-password" id="newDriverPassword" minlength="6" maxlength="72" placeholder="Mínimo 6 caracteres" required="" type="password"/>
+</label>
+<label for="newDriverEmail">Email opcional
+            <input autocapitalize="none" autocomplete="email" id="newDriverEmail" inputmode="email" maxlength="160" placeholder="Si se deja vacío se crea ID@explora.local" spellcheck="false" type="email"/>
+</label>
+<label for="newDriverPhone">Teléfono opcional
+            <input autocomplete="tel" id="newDriverPhone" inputmode="tel" maxlength="40" placeholder="+54..."/>
+</label>
+</fieldset>
+<fieldset>
+<legend>Datos operativos</legend>
+<div class="admin-role-fixed"><strong>Rol asignado</strong><span>Chofer — acceso operativo</span></div>
+<label for="newDriverVehicle">Vehículo asignado opcional
+            <select id="newDriverVehicle"><option value="">Sin vehículo asignado</option></select>
+</label>
+</fieldset>
+<div aria-live="assertive" class="admin-create-msg" id="adminCreateMsg"></div>
+<div class="admin-form-actions">
+<button class="admin-form-cancel" id="adminCreateDriverCancelBtn" type="button">CANCELAR</button>
+<button class="admin-form-save" id="adminCreateSubmitBtn" type="submit">CREAR USUARIO Y CHOFER</button>
+</div>
+</form>
+</div>
+</section>
+<section aria-hidden="true" aria-label="Crear vehículo" class="admin-modal" id="adminCreateVehicleModal">
+<div aria-labelledby="adminCreateVehicleTitle" aria-modal="true" class="admin-modal-panel" role="dialog">
+<header class="admin-modal-header">
+<button aria-label="Cerrar" id="adminCreateVehicleCloseBtn" type="button">‹</button>
+<div><h2 id="adminCreateVehicleTitle">Crear vehículo</h2><p>Alta independiente del chofer y lista de vehículos creados.</p></div>
+</header>
+<form class="admin-create-form" id="adminCreateVehicleForm" novalidate="">
+<fieldset>
+<legend>Datos del vehículo</legend>
+<label for="vehiclePlateInput">Patente
+            <input autocapitalize="characters" autocomplete="off" id="vehiclePlateInput" maxlength="12" name="plate" placeholder="AF123BC" required="" spellcheck="false"/>
+</label>
+<label for="vehicleModelInput">Modelo
+            <input autocomplete="off" id="vehicleModelInput" maxlength="80" name="model" placeholder="Fiat Cronos" required=""/>
+</label>
+<p class="vehicle-form-note">Cambiar de chofer no elimina la patente, el modelo ni los datos propios del vehículo.</p>
+</fieldset>
+<div aria-live="assertive" class="admin-create-msg" id="vehicleFormMessage" role="status"></div>
+<div class="vehicle-form-actions">
+<button class="vehicle-form-cancel" id="vehicleFormCancelBtn" type="button">CANCELAR</button>
+<button class="vehicle-form-save" id="vehicleFormSaveBtn" type="submit">GUARDAR VEHÍCULO</button>
+</div>
+</form>
+<section aria-labelledby="adminVehicleListTitle" class="admin-vehicle-list-wrap">
+<div class="admin-vehicle-list-heading"><h3 id="adminVehicleListTitle">LISTA DE VEHÍCULOS</h3><small id="adminVehicleListStatus">Cargando…</small></div>
+<div class="admin-vehicle-list" id="adminVehicleList"></div>
+</section>
+</div>
+</section>
+<div aria-hidden="true" class="admin-management-confirm-backdrop" id="adminManagementConfirmBackdrop">
+<section aria-labelledby="adminManagementConfirmTitle" aria-modal="true" class="admin-management-confirm-card" role="dialog">
+<h2 id="adminManagementConfirmTitle">CONFIRMAR</h2>
+<p id="adminManagementConfirmMessage">¿Deseás continuar?</p>
+<div class="admin-management-confirm-actions">
+<button class="admin-management-confirm-cancel" id="adminManagementConfirmCancel" type="button">CANCELAR</button>
+<button class="admin-management-confirm-accept" id="adminManagementConfirmAccept" type="button">CONFIRMAR</button>
+</div>
+</section>
+</div>
+<div aria-hidden="true" class="admin-ui-diagnostic-backdrop" id="vehicleDiagnosticBackdrop">
+<section aria-labelledby="vehicleDiagnosticTitle" aria-modal="true" class="admin-ui-diagnostic-card" role="alertdialog">
+<header><div><strong id="vehicleDiagnosticTitle">EXPLORA · ADMIN_DRIVER_VEHICLE_MANAGEMENT</strong><small>El panel permanece visible hasta cierre manual.</small></div><button aria-label="Cerrar diagnóstico" id="vehicleDiagnosticClose" type="button">×</button></header>
+<pre id="vehicleDiagnosticText">—</pre>
+<div class="admin-ui-diagnostic-actions"><button id="vehicleDiagnosticCopy" type="button">COPIAR ERROR</button><button id="vehicleDiagnosticCloseBottom" type="button">CERRAR</button></div>
+</section>
+</div>
+<main aria-label="Dashboard EXPLORA" class="driver-dashboard" id="app">
+<section class="dashboard-shell-real">
+<header class="dashboard-header-real">
+<div aria-label="EXPLORA VIAJES Y SERVICIOS" class="explora-brand-real">
+<img alt="EXPLORA" class="explora-header-brand-image" decoding="async" src="icons/explora-logo-horizontal-v2411.png"/>
+</div>
+<button aria-label="Abrir mi perfil" class="driver-profile-button-real" data-action="abrir-perfil" id="dashboardProfileButton" type="button">
+<img alt="Avatar del usuario" class="dashboard-profile-avatar-real" id="dashboardProfileAvatar"/>
+<span class="dashboard-profile-copy-real">
+<strong id="dashboardProfileName">Cargando perfil…</strong>
+<small id="dashboardProfileRole">Chofer</small>
+</span>
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="m9 18 6-6-6-6"></path></svg>
+</button>
+</header>
+<section aria-live="polite" class="driver-welcome-real">
+<div>
+<h1 id="driverGreetingName">¡Buenas tardes!</h1>
+<p id="driverGreetingDate">Cargando fecha…</p>
+<p id="driverGreetingVehicle">Vehículo: cargando…</p>
+</div>
+<button aria-label="Salir de la cuenta" class="logout-pill-real" data-action="salir" type="button">
+          Salir
+          <svg aria-hidden="true" viewbox="0 0 24 24"><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path><path d="M21 3v18"></path></svg>
+</button>
+</section>
+<section aria-label="Estado operativo y cierre semanal" class="driver-status-real">
+<button aria-disabled="true" aria-label="Comprobando estado del cierre semanal" aria-live="polite" class="driver-status-card" data-layout="detail" data-status="loading" disabled="" id="driverStatusCard" type="button">
+<span class="driver-status-main">
+<span aria-hidden="true" class="driver-status-icon" id="driverStatusIcon">
+<svg viewbox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"></path><path d="M12 7v5l3 2"></path></svg>
+</span>
+<span class="driver-status-copy">
+<strong id="driverStatusTitle">COMPROBANDO CIERRE</strong>
+<span id="driverStatusMessage">Espera un momento…</span>
+<small id="driverStatusDetail"></small>
+</span>
+</span>
+<span aria-hidden="true" class="driver-status-action" id="driverStatusAction">
+<span aria-hidden="true" class="driver-status-action-icon" id="driverStatusActionIcon">
+<svg viewbox="0 0 24 24"><path d="M7 3h7l4 4v14H7z"></path><path d="M14 3v5h5"></path><path d="M9 14h6"></path><path d="M9 17h4"></path></svg>
+</span>
+<span class="driver-status-action-copy">
+<strong id="driverStatusActionTitle">VERIFICANDO</strong>
+<span id="driverStatusActionMessage">Sin acciones disponibles</span>
+</span>
+<span aria-hidden="true" class="driver-status-chevron"><svg viewbox="0 0 24 24"><path d="m9 18 6-6-6-6"></path></svg></span>
+</span>
+</button>
+</section>
+<section aria-labelledby="adminCommandTitle" class="admin-command-center" id="adminCommandCenter">
+<header class="admin-command-header">
+<div class="admin-command-heading">
+<p>PANEL ADMINISTRATIVO</p>
+<h2 id="adminCommandTitle">GESTIÓN EXPLORA</h2>
+<small>Accesos organizados para administrar la operación.</small>
+</div>
+<span aria-hidden="true" class="admin-command-badge">ADMIN</span>
+</header>
+<div aria-label="Herramientas administrativas" class="admin-action-tray" hidden="" id="adminActionTray">
+<button aria-label="Gestionar choferes" class="admin-action-button" data-action="admin-choferes" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><circle cx="9" cy="8" r="3"></circle><path d="M3 20c.5-4 2.6-6 6-6s5.5 2 6 6"></path><path d="M18 8v6M15 11h6"></path></svg><span><b>CHOFERES</b><small>Perfiles y accesos</small></span>
+</button>
+<button aria-label="Crear vehículo" class="admin-action-button admin-action-button--vehicle" data-action="admin-create-vehicle" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M4 14 6.5 8h11L20 14"></path><path d="M3 14h18v5H3z"></path><circle cx="7" cy="19" r="1.5"></circle><circle cx="17" cy="19" r="1.5"></circle><path d="M8 8l1.5-3h5L16 8"></path></svg><span><b>CREAR VEHÍCULO</b><small>Flota y asignaciones</small></span>
+</button>
+<button aria-label="Abrir cierres" class="admin-action-button" data-action="admin-cierres" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M6 3h12v18H6z"></path><path d="M9 8h6M9 12h6M9 16h4"></path></svg><span><b>CIERRES</b><small>Saldos y comprobantes</small></span>
+</button>
+<button aria-label="Auditar derivaciones" class="admin-action-button" data-action="admin-derivaciones" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M7 7h10"></path><path d="m14 4 3 3-3 3"></path><path d="M17 17H7"></path><path d="m10 14-3 3 3 3"></path></svg><span><b>DERIVACIONES</b><small>Auditoría semanal</small></span>
+</button>
+<button aria-label="Abrir multas" class="admin-action-button admin-action-button--danger" data-action="admin-multas" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M12 3 3 20h18Z"></path><path d="M12 9v5"></path><path d="M12 17h.01"></path></svg><span><b>MULTAS</b><small>Deudas e incidentes</small></span>
+</button>
+<button aria-label="Registrar préstamo personal" class="admin-action-button" data-action="admin-prestamo-personal" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M12 2a5 5 0 1 0 0 10A5 5 0 0 0 12 2z"></path><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"></path><path d="M17 11v6M14 14h6"></path></svg><span><b>PRÉSTAMO PERSONAL</b><small>100 % a cargo del chofer</small></span>
+</button>
+<button aria-label="Simular choferes" class="admin-action-button admin-action-button--simulation" data-action="admin-simulate-drivers" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M4 7h16v10H4z"></path><path d="M8 11h.01M16 11h.01"></path><path d="M9 15h6"></path><path d="M12 3v4"></path></svg><span><b>SIMULAR CHOFERES</b><small>Pruebas controladas</small></span>
+</button>
+<button aria-label="Lanzar app nueva" class="admin-action-button admin-action-button--launch" data-action="admin-launch" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M12 3v12"></path><path d="m7 8 5-5 5 5"></path><path d="M5 14v6h14v-6"></path></svg><span><b>LANZAR APP</b><small>Reinicio general</small></span>
+</button>
+</div>
+</section>
+<section aria-label="Derivaciones pendientes" aria-live="polite" class="derivation-notification-stack" hidden="" id="derivationNotificationStack"></section>
+<section aria-label="Deudas pendientes" aria-live="polite" class="debt-notification-stack" hidden="" id="debtNotificationStack"></section>
+<section aria-label="Ranking diario y derivaciones" class="performance-dashboard" id="weeklyRankingLive">
+<header class="section-header-real performance-dashboard-header">
+<h2>RANKING DIARIO</h2>
+<button aria-label="Abrir ranking diario" class="performance-open-pill" id="performanceDashboardOpenBtn" type="button">Ver ranking</button>
+</header>
+<div class="performance-dashboard-grid">
+<div class="performance-ranking-card-wrap">
+<button aria-label="Abrir ranking diario" class="daily-ranking-trigger" id="performanceRankingCard" type="button">
+<div aria-live="polite" class="performance-daily-leader-host" id="performancePodium">
+<article class="daily-leader-card is-empty is-compact" data-daily-state="empty"><span class="daily-leader-kicker">LÍDER DEL DÍA</span><p class="daily-leader-empty-copy">Calculando ranking actual...</p></article>
+</div>
+</button>
+<button aria-label="Recargar toda la información" class="cycle-hard-reload-btn" id="cycleHardReloadBtn" title="Recargar información" type="button">
+<svg aria-hidden="true" focusable="false" viewbox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66"></path><path d="M20 4v6h-6"></path></svg>
+</button>
+</div>
+<button aria-label="Abrir ranking de derivaciones" class="performance-dashboard-card performance-derivator-card" data-stable-derivation-card="true" id="performanceDerivatorCard" type="button">
+<div class="performance-card-kicker">RANKING DE DERIVACIONES</div>
+<div aria-atomic="true" aria-live="polite" class="performance-derivator-body" id="performanceDerivatorBody">
+<div class="performance-derivator-winner" hidden="" id="performanceDerivatorWinner">
+<div class="performance-derivator-visual">
+<span aria-hidden="true" class="performance-derivator-avatar is-empty" id="performanceDerivatorAvatar">
+<img alt="" hidden="" id="performanceDerivatorAvatarImage"/>
+<span aria-hidden="true" class="performance-derivator-initials" id="performanceDerivatorAvatarInitials"></span>
+</span>
+<span aria-label="Bono del diez por ciento" class="performance-derivator-percent-ring"><strong>10%</strong></span>
+</div>
+<div class="performance-derivator-copy">
+<strong id="performanceDerivatorName"></strong>
+<span class="performance-derivator-position" id="performanceDerivatorPosition">PUESTO 1</span>
+<span class="performance-derivator-derived" id="performanceDerivatorDerived"><span class="performance-derivator-derived-label">DINERO DERIVADO</span><span class="performance-derivator-derived-amount" id="performanceDerivatorDerivedAmount">$ 0</span></span>
+<span class="performance-derivator-bonus" id="performanceDerivatorBonusBlock">
+<small>BONO</small>
+<b id="performanceDerivatorBonus"></b>
+</span>
+</div>
+</div>
+<div class="performance-current-empty performance-derivator-empty" hidden="" id="performanceDerivatorEmpty">
+<svg aria-hidden="true" class="performance-derivator-empty-art" focusable="false" viewBox="0 0 180 112">
+<defs><linearGradient id="derivationEmptyGold" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#ffe49a"></stop><stop offset="1" stop-color="#c89225"></stop></linearGradient></defs>
+<path d="M22 87c22-8 39-22 52-43 6-10 15-16 27-16h42" fill="none" opacity=".34" stroke="url(#derivationEmptyGold)" stroke-dasharray="7 8" stroke-linecap="round" stroke-width="5"></path>
+<path d="m131 18 17 10-17 10" fill="none" stroke="url(#derivationEmptyGold)" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"></path>
+<rect fill="rgba(255,255,255,.035)" height="42" rx="13" stroke="rgba(255,226,145,.38)" width="70" x="28" y="56"></rect>
+<path d="M39 82h49l-6-15a8 8 0 0 0-7-5H53a8 8 0 0 0-7 5l-7 15Z" fill="none" stroke="url(#derivationEmptyGold)" stroke-linejoin="round" stroke-width="3"></path>
+<circle cx="48" cy="86" fill="#17130b" r="6" stroke="#e7bb58" stroke-width="3"></circle><circle cx="82" cy="86" fill="#17130b" r="6" stroke="#e7bb58" stroke-width="3"></circle>
+<circle cx="120" cy="63" fill="rgba(246,196,93,.12)" r="15" stroke="rgba(246,196,93,.45)" stroke-width="2"></circle><path d="M113 63h14m-7-7v14" stroke="#f3c45d" stroke-linecap="round" stroke-width="3"></path>
+</svg>
+<b id="performanceDerivatorEmptyTitle">Sé el primero en derivar un viaje</b>
+<small id="performanceDerivatorEmptyCopy">Todavía no hay dinero derivado en esta semana.</small>
+</div>
+</div>
+</button>
+<div aria-live="polite" aria-atomic="true" class="personal-record-host is-dashboard" id="personalRecordDashboardHost">
+<article class="personal-record-card is-neutral"><span class="personal-record-kicker">RÉCORD PERSONAL EXPLORA</span><strong>Estamos calculando tu progreso</strong><small>Sincronizando información confirmada…</small></article>
+</div>
+</div>
+</section>
+<section aria-labelledby="operationsTitle" class="operations-real">
+<h2 id="operationsTitle">OPERACIONES</h2>
+<div class="operations-grid-real">
+<button aria-label="Registrar cobro" class="operation-card-real op-green" data-action="nuevo-servicio" type="button">
+<span class="operation-orb-real"><svg viewbox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></span>
+<strong>REGISTRAR COBRO</strong>
+<small>QR, efectivo, tarjeta o transferencia</small>
+</button>
+<button aria-label="Cargar gastos" class="operation-card-real op-orange" data-action="cargar-gastos" type="button">
+<span class="operation-orb-real"><svg viewbox="0 0 24 24"><path d="M4 7.5h14.5A1.5 1.5 0 0 1 20 9v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11"></path><path d="M16 12h5v4h-5a2 2 0 0 1 0-4Z"></path></svg></span>
+<strong>CARGAR GASTO</strong>
+<small>Combustible, peajes y más</small>
+</button>
+<button aria-label="Derivar cobro" class="operation-card-real op-purple" data-action="derivar-servicio" type="button">
+<span class="operation-orb-real"><svg viewbox="0 0 24 24"><path d="M7 7h10M14 4l3 3-3 3"></path><path d="M17 17H7M10 14l-3 3 3 3"></path></svg></span>
+<strong>DERIVAR SERVICIO</strong>
+<small>Pasar a otro chofer</small>
+</button>
+</div>
+</section>
+<section aria-labelledby="financeTitle" class="finance-real">
+<header class="section-header-real">
+<h2 id="financeTitle">FINANZAS</h2>
+<button class="section-link-real" data-action="detalle-financiero" type="button">Ver detalle financiero ›</button>
+</header>
+<div class="finance-grid-real">
+<button aria-live="polite" class="finance-card-real finance-green" data-action="facturacion-semanal" data-billing-state="loading" id="dashboardWeeklyBillingCard" type="button">
+<span class="finance-label-real"><svg viewbox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v10"></path></svg>FACTURASTE</span>
+<strong id="dashboardWeeklyRevenue">$0</strong>
+<small id="dashboardWeeklyRevenueMeta">Esta semana</small>
+<svg aria-hidden="true" class="sparkline-real" viewbox="0 0 120 34"><path d="M2 28 L118 28" id="dashboardWeeklyRevenueSparklinePath"></path></svg>
+</button>
+<button class="finance-card-real finance-red" data-action="gastos-semanales" id="dashboardWeeklyExpensesCard" type="button">
+<span class="finance-label-real"><svg viewbox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v10"></path></svg>GASTASTE</span>
+<strong id="dashboardWeeklyExpenses">$0</strong>
+<small id="dashboardWeeklyExpensesMeta">Esta semana</small>
+<svg aria-hidden="true" class="sparkline-real" viewbox="0 0 120 34"><path d="M2 28 C14 20 24 27 36 18 S55 25 69 15 91 10 118 5"></path></svg>
+</button>
+<button aria-label="Abrir comprobantes" class="finance-card-real finance-blue finance-receipts-card" data-action="comprobantes" id="dashboardReceiptsCard" type="button">
+<span class="finance-doc-real"><svg viewbox="0 0 24 24"><path d="M7 3h7l4 4v14H7z"></path><path d="M14 3v5h5"></path></svg></span>
+<strong class="finance-receipts-title">COMPROBANTES</strong>
+<small id="dashboardReceiptsMeta">Ver y gestionar comprobantes</small>
+</button>
+<button aria-label="Abrir Préstamo Explora" class="finance-card-real finance-loan-card" data-action="prestamo-explora" id="dashboardExploreLoanCard" type="button">
+<span class="finance-doc-real finance-loan-icon"><svg viewbox="0 0 24 24"><path d="M4 7h16v11H4z"></path><path d="M7 7V5h10v2"></path><path d="M8 12h8M8 15h5"></path></svg></span>
+<strong class="finance-receipts-title">PRÉSTAMO EXPLORA</strong>
+<small id="dashboardExploreLoanMeta">Beneficio según tu desempeño</small>
+</button>
+</div>
+</section>
+<section aria-labelledby="summaryTitle" class="quick-summary-real vehicle-management-real">
+<h2 id="summaryTitle">GESTIÓN DEL VEHÍCULO</h2>
+<div class="summary-grid-real vehicle-management-grid">
+<button aria-label="Abrir información de mi auto asignado" class="summary-card-real vehicle-management-card vehicle-management-card--car" data-action="mi-auto" type="button">
+<span aria-hidden="true" class="vehicle-management-icon"><svg viewbox="0 0 24 24"><path d="M5 17h14"></path><path d="M6 17v2M18 17v2"></path><path d="m4 13 2-5h12l2 5v4H4z"></path><circle cx="7.5" cy="14.5" r="1"></circle><circle cx="16.5" cy="14.5" r="1"></circle></svg></span>
+<span class="vehicle-management-title">MI AUTO</span>
+<small class="vehicle-management-status" id="myVehicleDashboardStatus">Estado pendiente de completar</small>
+</button>
+<button aria-label="Consultar mis multas, choques y deudas pendientes" class="summary-card-real vehicle-management-card vehicle-management-card--alerts" data-action="multas-choques" type="button">
+<span aria-hidden="true" class="vehicle-management-icon"><svg viewbox="0 0 24 24"><path d="M12 3 3 20h18Z"></path><path d="M12 9v5"></path><path d="M12 17h.01"></path></svg></span>
+<span class="vehicle-management-title">MULTAS Y CHOQUES</span>
+<small class="vehicle-management-debt-status" id="driverIncidentsDashboardStatus">🟢 Sin deudas</small>
+</button>
+</div>
+</section>
+</section>
+</main>
+<section aria-hidden="true" aria-labelledby="myVehicleTitle" class="vehicle-detail-screen" hidden id="myVehicleScreen" inert>
+<div class="vehicle-detail-shell">
+<header class="vehicle-detail-header">
+<button aria-label="Volver al dashboard" class="vehicle-detail-back" id="myVehicleBack" type="button">‹</button>
+<div><p>GESTIÓN DEL VEHÍCULO</p><h1 id="myVehicleTitle">MI AUTO</h1></div>
+</header>
+<div aria-live="polite" class="vehicle-detail-status" id="myVehicleStatus">Cargando información del vehículo…</div>
+<div class="vehicle-detail-content" hidden="" id="myVehicleContent"></div>
+</div>
+</section>
+<section aria-hidden="true" aria-labelledby="driverIncidentsTitle" class="vehicle-detail-screen" hidden id="driverIncidentsScreen" inert>
+<div class="vehicle-detail-shell">
+<header class="vehicle-detail-header">
+<button aria-label="Volver al dashboard" class="vehicle-detail-back" id="driverIncidentsBack" type="button">‹</button>
+<div><p>GESTIÓN DEL VEHÍCULO</p><h1 id="driverIncidentsTitle">MULTAS Y CHOQUES</h1></div>
+</header>
+<div aria-live="polite" class="vehicle-detail-status" id="driverIncidentsStatus">Cargando multas, choques y deudas…</div>
+<div class="vehicle-incidents-list" hidden="" id="driverIncidentsList"></div>
+</div>
+<div aria-hidden="true" class="driver-debt-viewer" hidden="" id="driverDebtAttachmentViewer" inert="">
+<section aria-labelledby="driverDebtViewerTitle" aria-modal="true" class="driver-debt-viewer-card" role="dialog">
+<header><div><p>ARCHIVO OFICIAL</p><h2 id="driverDebtViewerTitle">Archivo adjunto</h2><small id="driverDebtViewerMeta">—</small></div><button aria-label="Cerrar visor" id="driverDebtViewerClose" type="button">×</button></header>
+<div class="driver-debt-viewer-body" id="driverDebtViewerBody"></div>
+<footer><div class="driver-debt-viewer-nav"><button aria-label="Archivo anterior" disabled="" id="driverDebtViewerPrev" type="button">‹</button><span id="driverDebtViewerCounter">1 de 1</span><button aria-label="Archivo siguiente" disabled="" id="driverDebtViewerNext" type="button">›</button></div><a hidden="" id="driverDebtViewerOpen" rel="noopener noreferrer" target="_blank">Abrir completo</a><button id="driverDebtViewerCloseBottom" type="button">Cerrar</button></footer>
+</section>
+</div>
+</section>
+<nav aria-label="Navegación contextual EXPLORA" class="main-bottom-nav performance-bottom-nav" id="mainBottomNav">
+<div aria-label="Ganadores diarios de la semana" aria-live="polite" class="performance-goal-viewport weekly-winner-plaque-viewport" id="performanceGoalViewport">
+<div class="performance-goal-track weekly-winner-plaque-track" data-weekly-awards-host="true" id="performanceGoalTrack"><article class="weekly-winner-plaque is-no-data" data-weekly-awards-loading="true"><span class="weekly-plaque-day">SEMANA</span><strong class="weekly-plaque-primary">CERRADO · SIN DATOS</strong><small class="weekly-plaque-note">Los ganadores se sincronizan en segundo plano</small></article></div>
+</div>
+
+</nav>
+<section aria-hidden="true" aria-label="Administración EXPLORA" class="admin-shared-screen" id="adminSharedScreen">
+<div class="admin-shared-shell">
+<header class="admin-shared-header">
+<button aria-label="Volver" class="admin-shared-back" id="adminSharedBackBtn" type="button">‹</button>
+<div class="admin-shared-heading">
+<h1 id="adminSharedTitle">ADMINISTRACIÓN</h1>
+<p id="adminSharedSubtitle">Gestión operativa EXPLORA</p>
+</div>
+<button aria-label="Actualizar" class="admin-shared-refresh" id="adminSharedRefreshBtn" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M20 11a8 8 0 1 0 2 5"></path><path d="M20 4v7h-7"></path></svg>
+</button>
+</header>
+<div class="admin-shared-segment" hidden="" id="adminSharedPeriodTabs" role="tablist">
+<button class="is-active" data-admin-period="week" type="button">Semana</button>
+<button data-admin-period="month" type="button">Mes</button>
+<button data-admin-period="year" type="button">Año</button>
+</div>
+<div class="admin-shared-segment admin-receipt-segment" hidden="" id="adminSharedReceiptTabs" role="tablist">
+<button class="is-active" data-admin-receipt-tab="payments" type="button">Pagos</button>
+<button data-admin-receipt-tab="expenses" type="button">Gastos</button>
+</div>
+<div aria-live="polite" class="admin-shared-status" id="adminSharedStatus"></div>
+<main class="admin-shared-content" id="adminSharedContent"></main>
+</div>
+</section>
+<div aria-hidden="true" class="admin-ui-diagnostic-backdrop" id="adminUiDiagnosticBackdrop">
+<section aria-labelledby="adminUiDiagnosticTitle" aria-modal="true" class="admin-ui-diagnostic-card" role="dialog">
+<header><div><strong id="adminUiDiagnosticTitle">EXPLORA · DIAGNÓSTICO ADMIN</strong><small>El panel permanece visible hasta cierre manual.</small></div><button aria-label="Cerrar diagnóstico" id="adminUiDiagnosticClose" type="button">×</button></header>
+<pre id="adminUiDiagnosticText"></pre>
+<div class="admin-ui-diagnostic-actions"><button id="adminUiDiagnosticCopy" type="button">COPIAR ERROR</button><button id="adminUiDiagnosticCloseBottom" type="button">CERRAR</button></div>
+</section>
+</div>
+<section aria-hidden="true" aria-label="Mi perfil" class="profile-screen" id="profileScreen">
+<div class="profile-shell">
+<header class="profile-header">
+<button aria-label="Volver al dashboard" class="profile-back" id="profileBackBtn" type="button">‹</button>
+<div class="profile-header-title">
+<h1>Mi perfil</h1>
+<p>Información personal y cuenta</p>
+</div>
+</header>
+<div class="profile-loading" id="profileLoading">Cargando datos del perfil…</div>
+<section class="profile-card">
+<div class="profile-avatar-area">
+<img alt="Avatar del chofer" class="profile-avatar-preview" id="profileAvatarPreview">
+<div class="profile-avatar-actions">
+<b>Foto de perfil</b>
+<small>Formato circular, optimizado para cargar rápido en celulares.</small>
+<button class="profile-change-photo" id="profileChangePhotoBtn" type="button">Cambiar foto</button>
+<input accept="image/jpeg,image/png,image/webp" class="profile-file-input" id="profilePhotoInput" type="file"/>
+</div>
+</img></div>
+</section>
+<section class="profile-pending-closure-card" hidden="" id="profilePendingClosureCard">
+<div>
+<span class="pending-kicker">PAGO PENDIENTE</span>
+<strong id="profilePendingClosureTitle">Comprobante pendiente</strong>
+<small id="profilePendingClosureText">Tienes un cierre semanal pendiente.</small>
+</div>
+<button id="profilePendingClosureBtn" type="button">Ver detalle</button>
+</section>
+<section class="profile-card">
+<form class="profile-form-grid" id="profileForm">
+<div class="profile-field">
+<label for="profileNameInput">Nombre completo</label>
+<input aria-readonly="true" autocomplete="name" id="profileNameInput" placeholder="Nombre completo" readonly="" tabindex="-1" type="text"/>
+</div>
+<div class="profile-field">
+<label for="profilePhoneInput">Número de teléfono</label>
+<input aria-readonly="true" autocomplete="tel" id="profilePhoneInput" placeholder="Ej: +54 9 3757 000000" readonly="" tabindex="-1" type="tel"/>
+</div>
+<div class="profile-field">
+<label for="profileEmailInput">Correo electrónico</label>
+<input aria-readonly="true" id="profileEmailInput" readonly="" tabindex="-1" type="email"/>
+</div>
+<div class="profile-readonly-grid">
+<div class="profile-meta-box" id="profileDriverIdBox">
+<span>Identificación</span>
+<b id="profileDriverIdText">—</b>
+</div>
+<div class="profile-meta-box" id="profileVehicleBox">
+<span>Vehículo asignado</span>
+<b id="profileVehicleText">—</b>
+<small hidden="" id="profileVehiclePlateText"></small>
+</div>
+</div>
+<p class="profile-admin-note" role="note">Datos administrados por EXPLORA</p>
+<button class="profile-save" disabled="" id="profileSaveBtn" type="submit">Guardar foto</button>
+<div aria-live="polite" class="profile-save-progress" id="profileSaveProgress" role="status"></div>
+<div aria-live="polite" class="profile-message" id="profileMessage" role="status"></div>
+</form>
+</section>
+</div>
+</section>
+<section aria-hidden="true" class="explore-loan-screen" id="exploreLoanScreen">
+<div class="explore-loan-shell">
+<header class="explore-loan-header">
+<button aria-label="Volver" class="explore-loan-back" id="exploreLoanBackBtn" type="button">‹</button>
+<div><span>FINANZAS</span><h1>PRÉSTAMO EXPLORA</h1></div>
+<span aria-hidden="true" class="explore-loan-header-icon">✦</span>
+</header>
+<section class="explore-loan-hero">
+<p class="explore-loan-kicker">EN EXPLORA QUEREMOS CRECER JUNTO A VOS.</p>
+<div aria-label="Valores premiados" class="explore-loan-rewards">
+<span>✓ LA COLABORACIÓN</span><span>✓ LAS DERIVACIONES</span><span>✓ EL LIDERAZGO</span><span>✓ EL ORDEN OPERATIVO</span>
+</div>
+<p>CUMPLÍ LOS REQUISITOS Y SOLICITÁ APROBACIÓN DE DAVID</p>
+<div class="explore-loan-real-info" role="note">
+<strong>PRÉSTAMOS REALES PARA LOS MEJORES CHOFERES</strong>
+<span>Al cumplir los requisitos, EXPLORA te presta dinero real en efectivo o por transferencia para que lo uses en lo que quieras. El importe se devuelve hasta en 8 cuotas semanales, sin interés, mediante descuentos automáticos sobre tus ingresos.</span>
+</div>
+</section>
+<section aria-live="polite" class="explore-loan-status-card" data-state="loading" id="exploreLoanStatusCard">
+<span id="exploreLoanStatusKicker">SIN INTERÉS</span>
+<h2 id="exploreLoanStatusTitle">CALCULANDO TU MONTO MÁXIMO</h2>
+<strong id="exploreLoanAvailableAmount">$0</strong>
+<div class="explore-loan-available-info">
+<b>MONTO MÁXIMO PARA USO LIBRE</b>
+<span>Hasta el 10% de la facturación válida de las últimas 8 semanas. Hasta 8 cuotas semanales, sin interés.</span>
+</div>
+<p id="exploreLoanStatusMessage">Disponible según constancia, cierres al día, colaboración y aprobación de David.</p>
+<div class="explore-loan-duration"><span>Base de cálculo</span><b>8 semanas · sin interés</b></div>
+</section>
+<section class="explore-loan-active-card" hidden="" id="exploreLoanActiveCard">
+<span id="exploreLoanActiveCardLabel">PRÉSTAMO ACTIVO</span>
+<h2 id="exploreLoanActiveCardTitle">Ya tenés un préstamo Explora en curso.</h2>
+<p>Para solicitar uno nuevo, primero debés cancelar completamente el préstamo actual.</p>
+<div class="explore-loan-active-grid">
+<div><small>Monto original</small><strong id="exploreLoanOriginalAmount">$0</strong></div>
+<div><small>Saldo pendiente</small><strong id="exploreLoanBalance">$0</strong></div>
+<div><small>Descuento semanal</small><strong id="exploreLoanWeeklyDiscount">$0</strong></div>
+<div><small>Estado</small><strong id="exploreLoanActiveState">ACTIVO</strong></div>
+</div>
+</section>
+<section aria-labelledby="exploreLoanRequirementGridTitle" class="explore-loan-requirements">
+<header><div><span>PRÉSTAMO EXPLORA SIN INTERÉS</span><h2 id="exploreLoanRequirementGridTitle">MIS REQUISITOS</h2></div><strong id="exploreLoanRequirementCount">0 de 5 + David</strong></header>
+<div aria-live="polite" class="explore-loan-requirement-grid" id="exploreLoanRequirementGrid">
+<article class="explore-loan-requirement is-locked" data-requirement-key="validBilling8Weeks"><span class="explore-loan-requirement-icon">🔒</span><strong>FACTURACIÓN VÁLIDA 8 SEMANAS</strong><small>Debe tener facturación válida acumulada en las últimas 8 semanas.</small><em>PENDIENTE</em><span class="explore-loan-requirement-new" hidden="">✅ NUEVO</span></article>
+<article class="explore-loan-requirement is-locked" data-requirement-key="rhythmReal"><span class="explore-loan-requirement-icon">🔒</span><strong>RITMO REAL</strong><small>52 de 56 días con movimiento real registrado.</small><em>0 / 56</em><span class="explore-loan-requirement-new" hidden="">✅ NUEVO</span></article>
+<article class="explore-loan-requirement is-locked" data-requirement-key="closureUpToDate"><span class="explore-loan-requirement-icon">🔒</span><strong>CIERRE AL DÍA</strong><small>Cierres existentes y al día en las 8 semanas.</small><em>PENDIENTE</em><span class="explore-loan-requirement-new" hidden="">✅ NUEVO</span></article>
+<article class="explore-loan-requirement is-locked" data-requirement-key="collaborationOk"><span class="explore-loan-requirement-icon">🔒</span><strong>COLABORACIÓN EXPLORA</strong><small>Derivaciones enviadas o colaboración aportada dentro de EXPLORA.</small><em>PENDIENTE</em><span class="explore-loan-requirement-new" hidden="">✅ NUEVO</span></article>
+<article class="explore-loan-requirement is-locked" data-requirement-key="noActiveLoan"><span class="explore-loan-requirement-icon">🔒</span><strong>SIN PRÉSTAMO ACTIVO</strong><small>No debe tener préstamo activo ni solicitud pendiente.</small><em>PENDIENTE</em><span class="explore-loan-requirement-new" hidden="">✅ NUEVO</span></article>
+<article class="explore-loan-requirement is-locked" data-requirement-key="davidApproval"><span class="explore-loan-requirement-icon">🔒</span><strong>APROBACIÓN DE DAVID</strong><small>David aprueba manualmente la solicitud antes de activar el préstamo.</small><em>PENDIENTE</em><span class="explore-loan-requirement-new" hidden="">✅ NUEVO</span></article>
+</div>
+</section>
+<section class="explore-loan-request-config" aria-label="Configurar solicitud de préstamo EXPLORA">
+<label>Monto solicitado <input id="exploreLoanAmountInput" type="number" min="1" step="1000" inputmode="numeric" /></label>
+<label>Cuotas semanales <input id="exploreLoanInstallmentsInput" type="number" min="1" max="8" step="1" value="8" inputmode="numeric" /></label>
+<small>Podés pedir menos que el máximo. El total a devolver es igual al monto solicitado.</small>
+</section>
+<button class="explore-loan-request" disabled="" id="exploreLoanRequestBtn" type="button">SOLICITAR APROBACIÓN</button>
+<section class="explore-loan-admin-panel" hidden="" id="exploreLoanAdminPanel" aria-label="Solicitudes pendientes de Préstamo EXPLORA">
+<header><span>ADMINISTRACIÓN DAVID</span><h2>Solicitudes pendientes</h2></header>
+<div id="exploreLoanAdminList" class="explore-loan-admin-list"><p class="explore-loan-admin-empty">Cargando solicitudes…</p></div>
+</section>
+<div aria-hidden="true" class="explore-loan-reject-modal" id="exploreLoanRejectModal">
+<section aria-labelledby="exploreLoanRejectTitle" aria-modal="true" class="explore-loan-reject-card" role="dialog">
+<header><div><span>PRÉSTAMO EXPLORA</span><h2 id="exploreLoanRejectTitle">Rechazar solicitud</h2><p id="exploreLoanRejectDriver">Chofer: —</p></div><button aria-label="Cerrar" id="exploreLoanRejectClose" type="button">×</button></header>
+<label for="exploreLoanRejectReason">Motivo del rechazo</label>
+<textarea id="exploreLoanRejectReason" rows="4" placeholder="Ejemplo: no cumple requisitos actuales, cierre pendiente o falta colaboración."></textarea>
+<div><button id="exploreLoanRejectCancel" type="button">CANCELAR</button><button id="exploreLoanRejectConfirm" type="button">CONFIRMAR RECHAZO</button></div>
+</section>
+</div>
+<p aria-live="polite" class="explore-loan-request-message" id="exploreLoanRequestMessage" role="status"></p>
+</div>
+</section>
+<div aria-hidden="true" aria-live="polite" class="explore-requirement-toast" id="exploreRequirementToast">
+<span>✅ NUEVO REQUISITO</span><strong id="exploreRequirementToastName">—</strong>
+</div>
+<div aria-hidden="true" class="explore-loan-diagnostic" id="exploreLoanDiagnostic">
+<section aria-labelledby="exploreLoanDiagnosticTitle" aria-modal="true" class="explore-loan-diagnostic-card" role="alertdialog">
+<header><div><strong id="exploreLoanDiagnosticTitle">EXPLORA - ERROR PRESTAMO_EXPLORA_REQUISITOS</strong><small>El diagnóstico aparece sólo ante un error real.</small></div><button aria-label="Cerrar" id="exploreLoanDiagnosticClose" type="button">×</button></header>
+<pre id="exploreLoanDiagnosticText">—</pre>
+<div><button id="exploreLoanDiagnosticCopy" type="button">COPIAR ERROR</button><button id="exploreLoanDiagnosticCloseBottom" type="button">CERRAR</button></div>
+</section>
+</div>
+<div aria-hidden="true" class="weekly-closure-overlay" hidden="" id="weeklyClosureOverlay">
+<section aria-labelledby="weeklyClosureTitle" aria-modal="true" class="weekly-closure-modal" role="dialog">
+<header class="weekly-closure-header">
+<div><span>Cierre semanal</span><h2 id="weeklyClosureTitle">CIERRE DE SEMANA</h2><p id="weeklyClosureSubtitle">Resumen provisional actualizado en tiempo real.</p></div>
+<button aria-label="Cerrar" id="weeklyClosureCloseBtn" type="button">×</button>
+</header>
+<nav aria-label="Vista del cierre semanal" class="weekly-closure-view-switch" id="weeklyClosureViewSwitch" role="tablist">
+<button aria-selected="true" class="is-active" id="weeklyClosureCurrentViewBtn" role="tab" type="button">SEMANA ACTUAL</button>
+<button aria-selected="false" id="weeklyClosurePreviousViewBtn" role="tab" type="button">VER CIERRE ANTERIOR</button>
+</nav>
+<div class="weekly-closure-content" id="weeklyClosureContent">
+<div class="weekly-closure-loading" hidden="" id="weeklyClosureLoading">Calculando el cierre con los datos reales de la semana…</div>
+<section aria-live="polite" class="weekly-closure-previous-empty" hidden="" id="weeklyClosurePreviousEmpty">
+<div class="weekly-closure-previous-empty-icon" aria-hidden="true">✓</div>
+<strong>TODAVÍA NO HAY UN CIERRE ANTERIOR</strong>
+<p>Cuando finalice la primera semana, su resumen definitivo aparecerá aquí.</p>
+<button id="weeklyClosurePreviousEmptyBackBtn" type="button">VOLVER A SEMANA ACTUAL</button>
+</section>
+<section aria-live="polite" class="weekly-closure-live-state" data-state="loading" id="weeklyClosureLiveState">
+<span id="weeklyClosureLiveBadge">ACTUALIZANDO RESUMEN…</span>
+<strong id="weeklyClosureLiveTitle">Resumen semanal</strong>
+<small id="weeklyClosureLiveDetail">Esperando el snapshot operativo consolidado.</small>
+<time id="weeklyClosureLiveUpdated">—</time>
+</section>
+<div class="closure-period-card">
+<div class="closure-period-cell"><span>SEMANA</span><strong id="weeklyClosurePeriod">—</strong></div>
+<div class="closure-period-cell"><span>CHOFER</span><strong id="weeklyClosureDriver">—</strong></div>
+</div>
+<section aria-labelledby="weeklyWeekTitle" class="closure-driver-block closure-driver-block--week" data-weekly-section="A">
+<header class="closure-driver-block-head"><span aria-hidden="true">🟦</span><h3 id="weeklyWeekTitle">MOVIMIENTO DE LA SEMANA</h3></header>
+<div class="closure-driver-list">
+<div class="closure-simple-row"><span>Facturación total</span><strong class="is-neutral" id="weeklyClosureBilling">$0</strong></div>
+<div class="closure-simple-row"><span>Efectivo</span><strong class="is-neutral" id="weeklyClosureCash">$0</strong></div>
+<div class="closure-simple-row"><span>Transferencias</span><strong class="is-neutral" id="weeklyClosureTransfers">$0</strong></div>
+<div class="closure-simple-row"><span>Tarjetas</span><strong class="is-neutral" id="weeklyClosureCards">$0</strong></div>
+<div class="closure-simple-row"><span>QR</span><strong class="is-neutral" id="weeklyClosureQr">$0</strong></div>
+<div class="closure-simple-row closure-summary-expense-row"><span>Gastos pagados</span><strong class="is-negative" id="weeklyClosureExpenses">$0</strong></div>
+</div>
+</section>
+<section aria-labelledby="weeklyResultShareTitle" class="closure-driver-block closure-driver-block--share closure-driver-block--result" data-weekly-section="B">
+<header class="closure-driver-block-head"><span aria-hidden="true">🟩</span><h3 id="weeklyResultShareTitle">RESULTADO PARA REPARTIR</h3></header>
+<div class="closure-driver-list">
+<div class="closure-simple-row"><span>Ganancia después de gastos</span><strong class="is-positive" id="weeklyClosureNetProfit">$0</strong></div>
+<div class="closure-simple-row"><span>Parte del chofer · 50%</span><strong class="is-positive" id="weeklyClosureDriverProfitShare">$0</strong></div>
+<div class="closure-simple-row"><span>Parte de EXPLORA · 50%</span><strong class="is-info" id="weeklyClosureExploraProfitShare">$0</strong></div>
+</div>
+</section>
+<section aria-labelledby="weeklyAdjustmentsTitle" class="closure-driver-block closure-driver-block--adjustments" data-weekly-section="C">
+<header class="closure-driver-block-head"><span aria-hidden="true">★</span><h3 id="weeklyAdjustmentsTitle">AJUSTES DEL CHOFER</h3></header>
+<div class="closure-driver-list">
+<div class="closure-simple-row"><span>Bono diario</span><strong class="is-positive" id="weeklyClosureDailyBonusAggregate">+$0</strong></div>
+<div class="closure-simple-row"><span>Bono récord personal</span><strong class="is-positive" id="weeklyClosurePersonalRecordBonus">+$0</strong></div>
+<div class="closure-simple-row"><span>Caja chica · 5%</span><strong class="is-negative" id="weeklyClosureRepairFund">$0</strong></div>
+<div class="closure-simple-row"><span>Otros ajustes</span><strong class="is-neutral" id="weeklyClosureOtherAdjustments">$0</strong></div>
+<div class="closure-simple-row closure-summary-total-row"><span>Parte final del chofer</span><strong class="is-positive" id="weeklyClosureDriverFinalShare">$0</strong></div>
+</div>
+</section>
+<section aria-labelledby="weeklyLiquidationTitle" class="closure-driver-block closure-driver-block--liquidation" data-weekly-section="D">
+<header class="closure-driver-block-head"><span aria-hidden="true">↔</span><h3 id="weeklyLiquidationTitle">LIQUIDACIÓN</h3></header>
+<div class="closure-driver-list closure-liquidation-list">
+<div class="closure-simple-row"><span>Dinero en poder del chofer</span><strong class="is-neutral" id="weeklyClosureDriverFundsAfterExpenses">$0</strong></div>
+<div class="closure-simple-row"><span>Parte que conserva</span><strong class="is-positive" id="weeklyClosureDriverKeeps">$0</strong></div>
+</div>
+<div class="closure-final-card closure-liquidation-result" data-result="balanced" id="weeklyClosureResultCard">
+<span class="closure-final-kicker" id="weeklyFinalTitle">RESULTADO FINAL</span>
+<b id="weeklyClosureStatusLabel">CUENTA EQUILIBRADA</b>
+<strong id="weeklyClosureAmount">$0</strong>
+<small id="weeklyClosurePayer">No hay saldo pendiente entre el chofer y David.</small>
+</div>
+</section>
+<section aria-labelledby="weeklyReceiptPanelTitle" class="closure-receipt-panel">
+<div class="closure-receipt-panel-head">
+<div><span id="weeklyReceiptPanelTitle">COMPROBANTE DE CIERRE</span><small>Visible para el chofer y para David en Comprobantes → Cierre semanal.</small></div>
+</div>
+<div aria-live="polite" class="closure-administrative-status" data-state="pending" id="weeklyClosureAdministrativeStatus">
+<strong id="weeklyClosureAdministrativeTitle">Pendiente de comprobante</strong>
+<span id="weeklyClosureAdministrativeDetail">Subí un comprobante para confirmar el cierre.</span>
+</div>
+<p class="weekly-closure-note" id="weeklyClosureNote">Pendiente de comprobante.</p>
+<div class="weekly-closure-existing-receipt" hidden="" id="weeklyClosureExistingReceipt"></div>
+<div class="closure-receipt-section">
+<form class="closure-receipt-form" hidden="" id="weeklyReceiptForm" novalidate="">
+<div class="closure-upload-section receipt-upload-field closure-receipt-card" id="weeklyClosureUploadSection">
+<div class="receipt-upload-heading">SUBIR COMPROBANTE DE CIERRE</div>
+<input accept="image/jpeg,image/png,image/webp" aria-label="Seleccionar o tomar una foto del comprobante de cierre" class="receipt-upload-input" id="weeklyDriverReceiptInput" type="file"/>
+<button aria-label="Subir comprobante de cierre" class="receipt-upload-trigger" id="weeklyDriverReceiptBtn" type="button">
+<svg aria-hidden="true" class="receipt-upload-icon" viewbox="0 0 24 24"><path d="M17 18a5 5 0 0 0 0-10 6 6 0 0 0-11.5 2A4 4 0 0 0 6 18h11"></path><path d="M12 12v8"></path><path d="m8 16 4-4 4 4"></path></svg>
+<span><b class="receipt-upload-title">Subir comprobante de cierre</b><small class="receipt-upload-subtitle">Tocá para seleccionar o tomar una foto</small></span>
+</button>
+<div class="receipt-preview closure-receipt-preview" hidden="" id="weeklyClosurePreview">
+<div class="receipt-preview-image" id="weeklyClosurePreviewThumb"></div>
+<div class="receipt-preview-info"><b id="weeklyClosurePreviewName"></b><small id="weeklyClosurePreviewMeta"></small></div>
+<button aria-label="Eliminar comprobante" class="receipt-preview-remove" id="weeklyClosurePreviewRemove" type="button">×</button>
+</div>
+<p class="receipt-formats">Formatos permitidos: JPG, PNG y WebP. La imagen se optimiza antes de subir.</p>
+</div>
+<button class="closure-primary closure-receipt-primary" id="weeklyClosureSubmitBtn" type="submit">CONFIRMAR COMPROBANTE</button>
+</form>
+<div aria-live="assertive" class="weekly-closure-msg closure-receipt-error" hidden="" id="weeklyClosureMsg" role="alert"></div>
+<section aria-live="assertive" class="closure-receipt-diagnostic" hidden="" id="weeklyClosureDiagnostic">
+<div class="closure-receipt-diagnostic-head">
+<strong>ERROR COMPROBANTE DE CIERRE</strong>
+<button aria-label="Cerrar diagnóstico" class="closure-receipt-diagnostic-close" id="weeklyClosureDiagnosticCloseBtn" type="button">×</button>
+</div>
+<div class="closure-receipt-diagnostic-grid">
+<span>Módulo</span><b id="weeklyClosureDiagModule">WEEKLY_CLOSURE_STATUS_AND_SUMMARY</b><span>Etapa</span><b id="weeklyClosureDiagStage">—</b><span>Código interno</span><b id="weeklyClosureDiagCode">—</b>
+<span>Función</span><b id="weeklyClosureDiagFunction">—</b><span>Código Firebase</span><b id="weeklyClosureDiagFirebaseCode">—</b>
+<span>Mensaje real Firebase</span><b id="weeklyClosureDiagFirebaseMessage">—</b>
+<span>Mensaje real JavaScript</span><b id="weeklyClosureDiagJsMessage">—</b><span>Sesión Firebase</span><b id="weeklyClosureDiagSession">—</b>
+<span>UID auth</span><b id="weeklyClosureDiagAuthUid">—</b><span>Rol</span><b id="weeklyClosureDiagRole">—</b>
+<span>Driver UID</span><b id="weeklyClosureDiagDriverUid">—</b><span>Coinciden</span><b id="weeklyClosureDiagUidMatch">—</b>
+<span>Semana activa</span><b id="weeklyClosureDiagPeriod">—</b><span>Semana financiera</span><b id="weeklyClosureDiagCycle">—</b>
+<span>closureId</span><b id="weeklyClosureDiagClosureId">—</b><span>Archivo</span><b id="weeklyClosureDiagFile">—</b>
+<span>MIME</span><b id="weeklyClosureDiagMime">—</b><span>Peso</span><b id="weeklyClosureDiagSize">—</b>
+<span>Efectivo</span><b id="weeklyClosureDiagCash">—</b><span>Transferencias</span><b id="weeklyClosureDiagTransfers">—</b>
+<span>Tarjetas</span><b id="weeklyClosureDiagCards">—</b><span>Gastos</span><b id="weeklyClosureDiagExpenses">—</b>
+
+<span>Bono derivador</span><b id="weeklyClosureDiagBonus">—</b><span>Colaboración</span><b id="weeklyClosureDiagCollaboration">—</b>
+<span>Deudas</span><b id="weeklyClosureDiagDebts">—</b><span>Préstamos</span><b id="weeklyClosureDiagLoans">—</b>
+<span>Otros movimientos</span><b id="weeklyClosureDiagOtherAdjustments">—</b><span>Saldo final</span><b id="weeklyClosureDiagFinal">—</b><span>Quién paga</span><b id="weeklyClosureDiagPayer">—</b>
+<span>Ruta Storage</span><b id="weeklyClosureDiagPath">—</b><span>Ruta Firestore</span><b id="weeklyClosureDiagFirestorePath">—</b>
+<span>Bucket</span><b id="weeklyClosureDiagBucket">—</b><span>Porcentaje</span><b id="weeklyClosureDiagPercentage">—</b>
+<span>Estado tarea</span><b id="weeklyClosureDiagTaskState">—</b><span>Tiempo transcurrido</span><b id="weeklyClosureDiagElapsed">—</b>
+<span>Timestamp</span><b id="weeklyClosureDiagTimestamp">—</b><span>Stack</span><b class="closure-receipt-diagnostic-stack" id="weeklyClosureDiagStack">—</b>
+</div>
+<button class="closure-receipt-copy" id="weeklyClosureDiagnosticCopyBtn" type="button">COPIAR ERROR</button>
+</section>
+<div class="weekly-closure-actions closure-receipt-actions"><button class="closure-secondary closure-receipt-secondary" id="weeklyClosureKeepPendingBtn" type="button">CERRAR</button></div>
+<button class="closure-secondary closure-receipt-secondary weekly-closure-back-dashboard" id="weeklyClosureBackToDashboardBtn" type="button">VOLVER AL MENÚ PRINCIPAL</button>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div aria-hidden="true" class="weekly-summary-diagnostic-backdrop" id="weeklySummaryDiagnosticBackdrop">
+<section aria-labelledby="weeklySummaryDiagnosticTitle" aria-modal="true" class="weekly-summary-diagnostic" role="dialog">
+<header><strong id="weeklySummaryDiagnosticTitle">EXPLORA - ERROR CIERRE SEMANAL</strong><button aria-label="Cerrar" id="weeklySummaryDiagnosticClose" type="button">×</button></header>
+<pre id="weeklySummaryDiagnosticText"></pre>
+<div class="weekly-summary-diagnostic-actions"><button id="weeklySummaryDiagnosticCopy" type="button">COPIAR ERROR</button><button id="weeklySummaryDiagnosticCloseBottom" type="button">CERRAR</button></div>
+</section>
+</div>
+<section aria-hidden="true" aria-label="Registrar cobro" class="new-service-screen" id="newServiceScreen">
+<div class="new-service-shell">
+<header class="new-service-header">
+<button aria-label="Volver" class="new-service-back" id="newServiceBackBtn" type="button"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M15 5 8 12l7 7"></path></svg></button>
+<div aria-label="EXPLORA VIAJES Y SERVICIOS" class="new-service-logo-wrap">
+<img alt="EXPLORA" class="new-service-brand-image" decoding="async" src="icons/explora-logo-horizontal-v2411.png"/>
+<div class="new-service-logo-sub">VIAJES Y SERVICIOS</div>
+</div>
+<div class="new-service-bell-wrap"><button aria-label="Notificaciones" class="new-service-bell" id="newServiceBellBtn" type="button"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 21h4"></path></svg></button><span aria-hidden="true" class="new-service-bell-dot"></span></div>
+</header>
+<main class="new-service-main">
+<section class="new-service-title-block"><h1>REGISTRAR COBRO</h1><p>Selecciona cómo recibiste el pago</p></section>
+<section aria-label="Medios de cobro" class="billing-method-grid" id="billingMethodGrid">
+<button aria-label="Código QR con comprobante obligatorio" class="billing-method-card billing-method-card--qr" data-billing-method="qr" type="button">
+<span class="billing-method-icon"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"></path><path d="M14 14h2v2h-2zM18 14h2v6h-6v-2M14 18h2"></path></svg></span><strong>CÓDIGO QR</strong><small>Registrar QR con comprobante</small>
+</button>
+<button aria-label="Efectivo" class="billing-method-card billing-method-card--cash" data-billing-method="cash" type="button">
+<span class="billing-method-icon"><svg aria-hidden="true" viewbox="0 0 24 24"><rect height="12" rx="2" width="18" x="3" y="6"></rect><circle cx="12" cy="12" r="3"></circle><path d="M6 9h.01M18 15h.01"></path></svg></span><strong>EFECTIVO</strong><small>Registrar monto recibido en efectivo</small>
+</button>
+<button aria-label="Tarjeta" class="billing-method-card billing-method-card--card" data-billing-method="card" type="button">
+<span class="billing-method-icon"><svg aria-hidden="true" viewbox="0 0 24 24"><rect height="14" rx="2" width="18" x="3" y="5"></rect><path d="M3 10h18"></path><path d="M7 15h4"></path></svg></span><strong>TARJETA</strong><small>Registrar tarjeta con comprobante</small>
+</button>
+<button aria-label="Transferencia manual con comprobante" class="billing-method-card billing-method-card--transfer" data-billing-method="transfer" type="button">
+<span class="billing-method-icon"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M4 7h16v11H4z"></path><path d="M8 11h8"></path><path d="m14 4 3 3-3 3"></path><path d="m10 21-3-3 3-3"></path></svg></span><strong>TRANSFERENCIA</strong><small>Registrar transferencia con comprobante</small>
+</button>
+</section>
+<div class="billing-info-note"><span>i</span><p>Tarjeta, transferencia y QR requieren un comprobante obligatorio. El efectivo se registra sin comprobante.</p></div>
+</main>
+</div>
+</section>
+<div aria-hidden="true" class="explora-persistent-upload-inputs" id="exploraPersistentUploadInputs">
+<input accept="image/jpeg,image/png,image/webp" class="receipt-upload-input" id="operationalLoanReceiptInput" type="file"/>
+<input accept="image/jpeg,image/png,image/webp,application/pdf" class="receipt-upload-input" id="driverDebtReceiptInput" type="file"/>
+<input accept="image/jpeg,image/png,image/webp" class="receipt-upload-input" id="weeklyAdminReceiptInput" type="file"/>
+</div>
+<div aria-hidden="true" class="billing-form-backdrop" id="billingFormBackdrop">
+<form aria-labelledby="billingFormTitle" aria-modal="true" class="billing-form-card" id="billingForm" novalidate="" role="dialog">
+<div class="billing-modal-content">
+<div class="billing-form-head"><div aria-hidden="true" class="billing-form-icon" id="billingFormIcon"></div><div class="billing-form-title"><h2 id="billingFormTitle">REGISTRAR COBRO</h2><p id="billingFormSubtitle">Completa el valor facturado</p></div></div>
+<section aria-label="Datos del cobro" class="billing-invoice">
+<div class="billing-invoice-row"><span>Tipo</span><strong id="billingTypeValue">—</strong></div>
+<div class="billing-invoice-row"><span>Fecha</span><strong id="billingDateValue">—</strong></div>
+<div class="billing-invoice-row"><span>Hora</span><strong id="billingTimeValue">—</strong></div>
+</section>
+<section class="billing-amount-section">
+<label class="billing-amount-label" for="billingAmountInput">1. MONTO COBRADO</label>
+<div class="billing-amount-box"><span>$</span><input aria-describedby="billingMessage" autocomplete="off" class="billing-amount-input" enterkeyhint="done" id="billingAmountInput" inputmode="numeric" placeholder="Ingresá el monto" type="text"/></div>
+</section>
+<section class="billing-transfer-receipt receipt-upload-field" hidden="" id="billingTransferReceiptPanel">
+<div class="receipt-upload-heading">2. COMPROBANTE DEL PAGO</div>
+<input accept="image/jpeg,image/png,image/webp" aria-label="Elegir una foto del comprobante" class="receipt-upload-input" hidden="" id="aliasReceiptInput" type="file"/>
+<div aria-live="polite" class="billing-receipt-requirement" id="billingReceiptRequirement" role="status">
+<svg aria-hidden="true" class="receipt-upload-icon" viewbox="0 0 24 24"><path d="M17 18a5 5 0 0 0 0-10 6 6 0 0 0-11.5 2A4 4 0 0 0 6 18h11"></path><path d="M12 12v8"></path><path d="m8 16 4-4 4 4"></path></svg>
+<span><b id="billingReceiptRequirementTitle">Todavía no cargaste la foto</b><small id="billingReceiptRequirementText">Usá el botón ELEGIR FOTO que está abajo ↓</small></span>
+</div>
+<div class="receipt-preview" hidden="" id="billingTransferReceiptPreview">
+<div class="receipt-preview-image" id="billingTransferReceiptVisual"></div>
+<div class="receipt-preview-info"><b id="billingTransferReceiptName"></b><small id="billingTransferReceiptSize"></small></div>
+<button aria-label="Quitar foto" class="receipt-preview-remove" id="billingTransferReceiptRemove" type="button">×</button>
+</div>
+</section>
+<div aria-live="polite" class="billing-message" id="billingMessage"></div>
+<div class="billing-actions"><button class="billing-action billing-action--exit" id="billingExitBtn" type="button">SALIR</button><button class="billing-action billing-action--primary" disabled="" id="billingPrimaryBtn" type="submit">FINALIZAR COBRO</button></div>
+</div>
+</form>
+</div>
+<section aria-hidden="true" aria-label="Cargar gasto" class="expense-screen" id="expenseScreen">
+<div class="expense-shell">
+<header class="expense-header">
+<button aria-label="Volver" class="expense-back" id="expenseBackBtn" type="button"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M15 5 8 12l7 7"></path></svg></button>
+<h1 class="expense-title">CARGAR GASTO</h1>
+<div aria-hidden="true" class="expense-top-icon"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M7 3h9l3 3v15l-2-1-2 1-2-1-2 1-2-1-2 1z"></path><path d="M16 3v4h4"></path><path d="M9 11h6"></path><path d="M9 15h4"></path><path d="M18 14v6"></path><path d="M15 17h6"></path></svg></div>
+</header>
+<section aria-labelledby="expenseTypeTitle" class="expense-type-section" id="expenseTypeSection">
+<div class="expense-section-label" id="expenseTypeTitle">1. Selecciona el tipo de gasto</div>
+<div aria-describedby="expenseTypeError" aria-invalid="false" aria-labelledby="expenseTypeTitle" class="expense-type-grid" id="expenseTypeGrid" role="radiogroup">
+<input class="expense-type-radio" form="expenseForm" id="expenseTypeCombustible" name="expenseType" type="radio" value="combustible">
+<label aria-checked="false" class="expense-type-card" for="expenseTypeCombustible">
+<span class="expense-check">✓</span><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M6 21V4h9v17"></path><path d="M8 8h5"></path><path d="M15 7l3 3v7a2 2 0 0 0 4 0v-5l-3-3"></path><path d="M5 21h11"></path></svg><b>Combustible</b><small>Carga de nafta o diésel</small>
+</label>
+<input class="expense-type-radio" form="expenseForm" id="expenseTypePeajes" name="expenseType" type="radio" value="peajes">
+<label aria-checked="false" class="expense-type-card" for="expenseTypePeajes">
+<span class="expense-check">✓</span><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M7 21 10 3"></path><path d="M17 21 14 3"></path><path d="M12 4v3"></path><path d="M12 10v4"></path><path d="M12 17v3"></path></svg><b>Peajes</b><small>Peajes y telepeajes</small>
+</label>
+<input class="expense-type-radio" form="expenseForm" id="expenseTypeEstacionamiento" name="expenseType" type="radio" value="estacionamiento">
+<label aria-checked="false" class="expense-type-card" for="expenseTypeEstacionamiento">
+<span class="expense-check">✓</span><svg aria-hidden="true" viewbox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M10 17V7h4a3 3 0 0 1 0 6h-4"></path></svg><b>Estacionamiento</b><small>Estacionamientos y garages</small>
+</label>
+<input class="expense-type-radio" form="expenseForm" id="expenseTypeLavado" name="expenseType" type="radio" value="lavado">
+<label aria-checked="false" class="expense-type-card" for="expenseTypeLavado">
+<span class="expense-check">✓</span><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M5 16h14"></path><path d="M7 16l1.4-5h7.2L17 16"></path><path d="M6 16v3"></path><path d="M18 16v3"></path><circle cx="8" cy="19" r="1"></circle><circle cx="16" cy="19" r="1"></circle><path d="M8 4l-.8 1.4"></path><path d="M12 3l-.8 1.4"></path><path d="M16 4l-.8 1.4"></path></svg><b>Lavado</b><small>Lavado de vehículo</small>
+</label>
+<input class="expense-type-radio" form="expenseForm" id="expenseTypeMantenimiento" name="expenseType" type="radio" value="mantenimiento"/>
+<label aria-checked="false" class="expense-type-card" for="expenseTypeMantenimiento">
+<span class="expense-check">✓</span><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M21 7.5a5.5 5.5 0 0 1-7.4 5.2L6.3 20 4 17.7l7.3-7.3A5.5 5.5 0 0 1 16.5 3L14 5.5 18.5 10z"></path></svg><b>Mantenimiento</b><small>Reparaciones y servicios</small>
+</label>
+<input class="expense-type-radio" form="expenseForm" id="expenseTypeCompras" name="expenseType" type="radio" value="compras"/>
+<label aria-checked="false" class="expense-type-card" for="expenseTypeCompras">
+<span class="expense-check">✓</span><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M4 5h2l2 11h10l2-8H7"></path><circle cx="10" cy="20" r="1"></circle><circle cx="17" cy="20" r="1"></circle></svg><b>Compras</b><small>Compras varias relacionadas</small>
+</label>
+</input></input></input></input></div>
+<p class="expense-type-error" hidden="" id="expenseTypeError" role="alert">Selecciona el tipo de gasto antes de cargar el comprobante.</p>
+</section>
+<div class="expense-section-label">2. Completa los datos</div>
+<form id="expenseForm" novalidate="">
+<section class="expense-form-card">
+<div class="expense-form-section">
+<label for="expenseAmountInput">Monto del gasto</label>
+<div class="expense-amount-box is-invalid">
+<span class="expense-currency">$</span>
+<input autocomplete="off" class="expense-amount-input" enterkeyhint="done" id="expenseAmountInput" inputmode="numeric" placeholder="Ingresa el monto" type="text"/>
+<button aria-label="Limpiar monto" class="expense-clear-amount" id="expenseClearAmountBtn" type="button">×</button>
+</div>
+<p class="expense-help">Ingresa el monto total del gasto</p>
+</div>
+<div class="expense-form-section">
+<label>Comprobante</label>
+<input accept="image/jpeg,image/png,image/webp" aria-label="Seleccionar o tomar una foto del comprobante" class="expense-file-input" id="expenseReceiptInput" name="expenseReceipt" type="file"/>
+<button aria-label="Subir comprobante" class="expense-upload-zone receipt-upload-trigger" id="expenseUploadBtn" type="button">
+<svg aria-hidden="true" class="receipt-upload-icon" viewbox="0 0 24 24"><path d="M17 18a5 5 0 0 0 0-10 6 6 0 0 0-11.5 2A4 4 0 0 0 6 18h11"></path><path d="M12 12v8"></path><path d="m8 16 4-4 4 4"></path></svg>
+<span><b class="receipt-upload-title">Subir comprobante</b><small class="receipt-upload-subtitle">Toca para seleccionar o tomar foto</small></span>
+</button>
+<div class="expense-file-preview" id="expenseFilePreview">
+<div aria-hidden="true" class="expense-preview-thumb" id="expensePreviewThumb"></div>
+<div class="expense-preview-info"><b id="expensePreviewName"></b><small id="expensePreviewSize"></small></div>
+<button aria-label="Eliminar comprobante" class="expense-remove-file" id="expenseRemoveFileBtn" type="button">×</button>
+</div>
+<p class="expense-help receipt-formats">Formatos permitidos: JPG, PNG y WebP. La imagen se optimiza antes de subir.</p>
+</div>
+<div class="expense-form-section">
+<label for="expenseNotesInput">Observaciones (opcional)</label>
+<textarea class="expense-notes" id="expenseNotesInput" maxlength="150" placeholder="Agrega una nota adicional..."></textarea>
+<div class="expense-counter" id="expenseNotesCounter">0/150</div>
+</div>
+</section>
+<button class="expense-submit" id="expenseSubmitBtn" type="submit">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M7 3h9l3 3v15l-2-1-2 1-2-1-2 1-2-1-2 1z"></path><path d="M16 3v4h4"></path><path d="M9 11h6"></path><path d="M9 15h4"></path><path d="M18 14v6"></path><path d="M15 17h6"></path></svg>
+<span>CARGAR GASTO</span>
+</button>
+<div aria-live="polite" class="expense-upload-progress" data-internal-only="true" hidden="" id="expenseUploadProgress"></div>
+<div aria-live="polite" class="expense-message" id="expenseMessage"></div>
+<section aria-label="Diagnóstico de carga del gasto" aria-live="polite" class="expense-diagnostic" hidden="" id="expenseDiagnosticPanel">
+<div class="expense-diagnostic-head">
+<div>
+<strong>EXPLORA - ERROR CARGAR GASTO</strong>
+</div>
+<button aria-label="Cerrar diagnóstico" class="expense-diagnostic-close" id="expenseDiagnosticCloseBtn" type="button">×</button>
+</div>
+<div class="expense-diagnostic-grid">
+<span>ETAPA</span><b id="expenseDiagnosticStage">—</b>
+<span>CÓDIGO</span><b id="expenseDiagnosticCode">—</b>
+<span>MENSAJE</span><b id="expenseDiagnosticMessage">—</b>
+<span>FORMDATA EXPENSE TYPE</span><b id="expenseDiagnosticFormDataType">—</b>
+<span>FORM ELEMENTS EXPENSE TYPE</span><b id="expenseDiagnosticElementsType">—</b>
+<span>ESTADO EXPENSE TYPE</span><b id="expenseDiagnosticStateType">—</b>
+<span>RADIOS ENCONTRADOS</span><b id="expenseDiagnosticRadioCount">—</b>
+<span>RADIOS MARCADOS</span><b id="expenseDiagnosticCheckedCount">—</b>
+<span>RADIO MARCADO ID</span><b id="expenseDiagnosticCheckedId">—</b>
+<span>RADIO MARCADO VALUE</span><b id="expenseDiagnosticCheckedValue">—</b>
+<span>TARJETA VISUAL SELECCIONADA</span><b id="expenseDiagnosticVisualCard">—</b>
+<span>TYPE_LABELS VÁLIDO</span><b id="expenseDiagnosticTypeValid">—</b>
+<span>FORMULARIO ENCONTRADO</span><b id="expenseDiagnosticFormFound">—</b>
+<span>GRID ENCONTRADO</span><b id="expenseDiagnosticGridFound">—</b>
+<span>ARCHIVO CONSERVADO</span><b id="expenseDiagnosticFilePreserved">—</b>
+<span>ARCHIVO</span><b id="expenseDiagnosticFile">—</b>
+<span>MIME ORIGINAL</span><b id="expenseDiagnosticOriginalMime">—</b>
+<span>MIME PROCESADO</span><b id="expenseDiagnosticProcessedMime">—</b>
+<span>EXTENSIÓN ORIGINAL</span><b id="expenseDiagnosticSourceExtension">—</b>
+<span>EXTENSIÓN PROCESADA</span><b id="expenseDiagnosticProcessedExtension">—</b>
+<span>FIRMA REAL DEL ARCHIVO</span><b id="expenseDiagnosticDetectedFormat">—</b>
+<span>MUTACIÓN DE FORMATO</span><b id="expenseDiagnosticFormatMutation">—</b>
+<span>PESO ORIGINAL</span><b id="expenseDiagnosticOriginalSize">—</b>
+<span>PESO PROCESADO</span><b id="expenseDiagnosticProcessedSize">—</b>
+<span>SESIÓN</span><b id="expenseDiagnosticSession">—</b>
+<span>UID</span><b id="expenseDiagnosticUid">—</b>
+<span>EXPENSE ID</span><b id="expenseDiagnosticExpenseId">—</b>
+<span>WEEKLY PERIOD ID</span><b id="expenseDiagnosticWeeklyPeriodId">—</b>
+<span>STORAGE</span><b id="expenseDiagnosticStorage">—</b>
+<span>FIRESTORE</span><b id="expenseDiagnosticFirestore">—</b>
+<span>RUTA</span><b id="expenseDiagnosticPath">—</b>
+<span>PORCENTAJE</span><b id="expenseDiagnosticProgress">—</b>
+<span>ESTADO TAREA</span><b id="expenseDiagnosticTaskState">—</b>
+<span>ESTADO DE RED</span><b id="expenseDiagnosticNetworkState">—</b>
+<span>HTTP STATUS</span><b id="expenseDiagnosticHttpStatus">—</b>
+<span>RESPUESTA SERVIDOR</span><b id="expenseDiagnosticServerResponse">—</b>
+<span>TIMEOUT</span><b id="expenseDiagnosticTimeout">—</b>
+<span>TIEMPO</span><b id="expenseDiagnosticElapsed">—</b>
+<span>ERROR REAL</span><b id="expenseDiagnosticRealError">—</b>
+<span>CANCELACIÓN INTENTADA</span><b id="expenseDiagnosticCancelAttempted">—</b>
+<span>STORAGE CONFIRMÓ</span><b id="expenseDiagnosticStorageConfirmed">—</b>
+<span>URL OBTENIDA</span><b id="expenseDiagnosticUrlObtained">—</b>
+<span>FIRESTORE CONFIRMÓ</span><b id="expenseDiagnosticFirestoreConfirmed">—</b>
+</div>
+<div class="expense-diagnostic-actions">
+<button id="expenseDiagnosticCopyBtn" type="button">COPIAR DIAGNÓSTICO</button>
+<button id="expenseDiagnosticDismissBtn" type="button">CERRAR DIAGNÓSTICO</button>
+</div>
+</section>
+</form>
+</div>
+</section>
+<section aria-hidden="true" aria-label="Comprobantes" class="receipts-screen" data-view="main" id="receiptsScreen">
+<div class="receipts-shell">
+<header class="receipts-header">
+<button aria-label="Volver" class="receipts-back" id="receiptsBackBtn" type="button"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M15 5 8 12l7 7"></path></svg></button>
+<h1 class="receipts-title">COMPROBANTES</h1>
+<div aria-hidden="true" class="receipts-top-icon"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M7 3h9l3 3v15l-2-1-2 1-2-1-2 1-2-1-2 1z"></path><path d="M16 3v4h4"></path><path d="M9 11h6"></path><path d="M9 15h4"></path></svg></div>
+</header>
+<main class="receipts-main">
+<section class="receipts-hero">
+<h2>COMPROBANTES</h2>
+<p>Selecciona el tipo de comprobante</p>
+</section>
+<section aria-label="Tipos de comprobante" class="receipts-category-grid">
+<button aria-label="Ver comprobantes de deudas" class="receipt-category-card receipt-category-card--debts" data-receipt-category="deudas" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M7 3h10v18H7z"></path><path d="M9 8h6M9 12h4"></path><path d="m14 16 2 2 4-5"></path></svg>
+<b>DEUDAS</b><small>Multas, choques y otros cargos</small>
+</button>
+<button aria-label="Ver comprobantes de préstamos" class="receipt-category-card receipt-category-card--loans" data-receipt-category="prestamos" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M4 8h16v10H4z"></path><path d="M7 8V5h10v3M8 13h8"></path></svg>
+<b>PRÉSTAMOS</b><small>Préstamos operativos compartidos</small>
+</button>
+<button aria-label="Ver comprobantes de pagos de clientes" class="receipt-category-card receipt-category-card--alias" data-receipt-category="alias" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M4 7h16v11H4z"></path><path d="M8 11h8M8 15h4"></path></svg>
+<b>PAGO CLIENTE</b><small>Tarjeta, transferencias y QR</small>
+</button>
+<button aria-label="Ver comprobantes de gastos" class="receipt-category-card receipt-category-card--expenses" data-receipt-category="gastos" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M7 3h10v18H7z"></path><path d="M9 8h6M9 12h4M11 16h6"></path></svg>
+<b>GASTASTE</b><small>Comprobantes asociados a gastos</small>
+</button>
+<button aria-label="Ver comprobantes de cierres semanales" class="receipt-category-card receipt-category-card--closures" data-receipt-category="cierres" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M5 5h14v14H5z"></path><path d="M8 10h8M8 14h5"></path></svg>
+<b>CIERRE SEMANAL</b><small>Liquidaciones y pagos semanales</small>
+</button>
+</section>
+</main>
+<section aria-label="Listado de comprobantes" class="receipts-list-view">
+<div class="receipts-list-head">
+<div class="receipts-list-icon" id="receiptsListIcon"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M7 3h10v18H7z"></path><path d="M9 8h6"></path><path d="M9 12h3"></path><path d="m13 16 2 2 4-5"></path></svg></div>
+<div>
+<h2 id="receiptsListTitle">PAGOS</h2>
+<p id="receiptsListSubtitle">Comprobantes de pagos registrados</p>
+</div>
+</div>
+<section class="receipts-closure-overview" hidden="" id="receiptsClosureOverview">
+<div class="receipts-closure-period"><span>SEMANA SELECCIONADA</span><strong id="receiptsClosureWeekLabel">—</strong></div>
+<div class="receipts-closure-counters" aria-label="Resumen de estados">
+<article class="is-missing"><span>Falta comprobante</span><strong id="receiptsClosureMissing">0</strong></article>
+<article class="is-received"><span>Comprobante recibido</span><strong id="receiptsClosureReceived">0</strong></article>
+<article class="is-confirmed"><span>Pago confirmado</span><strong id="receiptsClosureConfirmed">0</strong></article>
+<article class="is-rejected"><span>Rechazado</span><strong id="receiptsClosureRejected">0</strong></article>
+</div>
+<div class="receipts-closure-week-actions"><button class="is-active" id="receiptsCurrentWeekBtn" type="button">SEMANA ACTUAL</button><button id="receiptsPreviousWeekBtn" type="button">VER SEMANA ANTERIOR</button></div>
+</section>
+<div class="receipts-search-wrap">
+<svg aria-hidden="true" viewbox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 5 5"></path></svg>
+<input autocomplete="off" class="receipts-search" id="receiptsSearchInput" placeholder="Buscar pago o chofer…" type="search"/>
+</div>
+<div aria-label="Filtros de comprobantes" class="receipts-filter-row" id="receiptsFilterRow">
+<button class="receipt-filter-btn is-active" data-receipt-filter="todos" type="button">Todos</button>
+<button class="receipt-filter-btn" data-receipt-filter="pendiente" type="button">Pendientes</button>
+<button class="receipt-filter-btn" data-receipt-filter="recibido" hidden="" type="button">Comprobante recibido</button>
+<button class="receipt-filter-btn" data-receipt-filter="aprobado" type="button">Aprobados</button>
+<button class="receipt-filter-btn" data-receipt-filter="rechazado" type="button">Rechazados</button>
+<button class="receipt-filter-btn" data-receipt-filter="semana" type="button">Esta semana</button>
+<button class="receipt-filter-btn" data-receipt-filter="mes" type="button">Este mes</button>
+</div>
+<div class="receipts-admin-filters" hidden="" id="receiptsAdminFilters">
+<label>Chofer<select id="receiptsDriverFilter"><option value="">Todos los choferes</option></select></label>
+<label>Mes<select id="receiptsMonthFilter"><option value="">Todos los meses</option></select></label>
+<label>Semana<select id="receiptsWeekFilter"><option value="">Todas las semanas</option></select></label>
+<label hidden="">Vehículo<select id="receiptsVehicleFilter"><option value="">Todos los vehículos</option></select></label>
+</div>
+<div class="receipts-status" id="receiptsStatus"></div>
+<div class="receipts-list" id="receiptsList"></div>
+<div class="receipts-empty" id="receiptsEmpty">No se encontraron comprobantes.</div>
+</section>
+</div>
+</section>
+<div aria-hidden="true" class="receipt-detail-backdrop" id="receiptDetailBackdrop">
+<section aria-labelledby="receiptDetailTitle" aria-modal="true" class="receipt-detail-modal" role="dialog">
+<h2 id="receiptDetailTitle">Detalle del comprobante</h2>
+<div class="receipt-detail-preview" id="receiptDetailPreview"></div>
+<div class="receipt-detail-lines" id="receiptDetailLines"></div>
+<div class="receipt-detail-actions">
+<button class="receipt-detail-action" id="receiptDetailCloseBtn" type="button">Cerrar</button>
+<a class="receipt-detail-action primary" href="#" id="receiptDetailOpenLink" rel="noopener" target="_blank">Abrir archivo</a>
+</div>
+</section>
+</div>
+<section aria-hidden="true" aria-label="Derivaciones" class="derivation-screen" data-derivation-view="received" id="derivationScreen">
+<div class="derivation-shell derivation-shell--simple">
+<header class="derivation-header">
+<button aria-label="Volver" class="derivation-back" id="derivationBackBtn" type="button"><svg viewbox="0 0 24 24"><path d="M15 5 8 12l7 7"></path></svg></button>
+<div class="derivation-heading"><h1>DERIVACIONES</h1><p>Primero resolvé los servicios que recibiste.</p></div>
+<button aria-label="Actualizar derivaciones" class="derivation-refresh" id="derivationRefreshBtn" type="button"><svg viewbox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.2 5.5"></path><path d="M20 4v7h-7"></path></svg></button>
+</header>
+<nav aria-label="Vistas de derivaciones" class="derivation-tabs derivation-tabs--v256">
+<button class="derivation-tab is-active" data-derivation-tab="received" id="derivationReceivedTab" type="button">RECIBIDAS <span id="derivationReceivedCount">0</span></button>
+<button class="derivation-tab" data-derivation-tab="create" id="derivationCreateTab" type="button">DERIVAR SERVICIO</button>
+</nav>
+<main class="derivation-simple-main derivation-simple-main--v256">
+<section class="derivation-panel is-active" data-derivation-panel="received" id="derivationReceivedPanel">
+<section class="derivation-section-card derivation-current-section" hidden="" id="derivationCurrentSection">
+<div class="derivation-section-title-row"><div><span>SERVICIO ACTUAL</span><h2>DERIVACIÓN EN CURSO</h2></div><b id="derivationCurrentCount">0</b></div>
+<div class="derivation-list" id="derivationCurrentList"></div>
+</section>
+<section class="derivation-section-card" hidden="" id="derivationPendingSection">
+<div class="derivation-section-title-row"><div><span>REQUIEREN ACCIÓN</span><h2>PENDIENTES</h2></div><b id="derivationPendingCount">0</b></div>
+<div class="derivation-list" id="derivationPendingList"></div>
+</section>
+<section class="derivation-section-card derivation-finalized-section" hidden="" id="derivationFinalizedSection">
+<div class="derivation-section-title-row"><div><span>SEMANA ACTUAL</span><h2>FINALIZADAS ESTA SEMANA</h2></div><b id="derivationFinalizedCount">0</b></div>
+<div class="derivation-list" id="derivationFinalizedList"></div>
+</section>
+<section class="derivation-empty-state" hidden="" id="derivationReceivedEmpty">
+<strong>NO TENÉS DERIVACIONES RECIBIDAS</strong>
+<span>Cuando otro chofer te derive un servicio, aparecerá aquí.</span>
+<button data-derivation-tab="create" type="button">DERIVAR UN SERVICIO</button>
+</section>
+</section>
+<section class="derivation-panel" data-derivation-panel="create" id="derivationCreatePanel">
+<div class="derivation-create-intro"><span>ENVIAR NUEVA DERIVACIÓN</span><h2>DERIVAR UN SERVICIO</h2><p>Seleccioná el monto, el concepto y el chofer que recibirá el servicio.</p></div>
+<form class="derivation-simple-form" id="derivationForm" novalidate="">
+<section class="derivation-section-card derivation-fields-card">
+<label for="derivationAmount">1. MONTO
+                <input autocomplete="off" enterkeyhint="next" id="derivationAmount" inputmode="numeric" placeholder="$ 0" type="text"/>
+</label>
+<label for="derivationDescription">2. CONCEPTO
+                <input autocomplete="off" enterkeyhint="next" id="derivationDescription" maxlength="120" placeholder="Ej.: Cataratas" type="text"/>
+</label>
+</section>
+<section class="derivation-section-card">
+<h2>3. CHOFER RECEPTOR</h2>
+<div class="derivation-driver-grid" id="derivationDriverGrid"></div>
+</section>
+<section class="derivation-section-card derivation-compact-summary">
+<div class="derivation-summary-row"><span>Chofer receptor</span><strong id="derivationSummaryReceiver">Sin seleccionar</strong></div>
+<div class="derivation-summary-row"><span>Monto</span><strong class="price" id="derivationSummaryPrice">$0</strong></div>
+<div class="derivation-summary-row"><span>Concepto</span><strong id="derivationSummaryService">Sin completar</strong></div>
+</section>
+<div aria-live="polite" class="derivation-message" id="derivationFormMessage"></div>
+<div class="derivation-form-actions"><button class="derivation-secondary" id="derivationCancelBtn" type="button">VOLVER A RECIBIDAS</button><button class="derivation-primary derivation-primary--wide" disabled="" id="derivationSendBtn" type="submit">ENVIAR</button></div>
+</form>
+</section>
+</main>
+</div>
+</section>
+<div aria-hidden="true" class="derivation-modal-backdrop" id="derivationFinalizeBackdrop">
+<section aria-labelledby="derivationFinalizeTitle" aria-modal="true" class="derivation-modal derivation-finalize-modal" role="dialog">
+<header class="derivation-finalize-head">
+<span aria-hidden="true" class="derivation-finalize-icon"><svg viewbox="0 0 24 24"><path d="M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"></path><path d="M9 9h6M9 13h6M9 17h3"></path><path d="m16.5 14.5 2 2 3-4"></path></svg></span>
+<div><h2 id="derivationFinalizeTitle">CARGAR DERIVACIÓN</h2><p>Confirmá el monto facturado y cómo abonó el pasajero.</p></div>
+</header>
+<div class="derivation-finalize-summary" id="derivationFinalizeSummary"></div>
+<label class="derivation-final-amount-label" for="derivationFinalAmount">MONTO REAL FACTURADO
+        <span class="derivation-final-amount-box"><b>$</b><input autocomplete="off" enterkeyhint="done" id="derivationFinalAmount" inputmode="numeric" placeholder="0" type="text"/></span>
+</label>
+<div aria-label="Forma de pago real" class="derivation-payment-grid">
+<button class="derivation-payment-option" data-derivation-payment="cash" type="button">EFECTIVO</button>
+<button class="derivation-payment-option" data-derivation-payment="transfer" type="button">TRANSFERENCIA</button>
+<button class="derivation-payment-option" data-derivation-payment="card" type="button">TARJETA</button>
+<button class="derivation-payment-option" data-derivation-payment="other" type="button">OTRO</button>
+</div>
+<div aria-live="polite" class="derivation-message" id="derivationFinalizeMessage"></div>
+<div class="derivation-modal-footer derivation-modal-footer--three"><button class="danger" id="derivationFinalizeRejectBtn" type="button">RECHAZAR DEFINITIVAMENTE</button><button id="derivationFinalizeCancelBtn" type="button">CANCELAR</button><button aria-disabled="true" class="primary" id="derivationFinalizeConfirmBtn" type="button">CONFIRMAR CARGA</button></div>
+</section>
+</div>
+<section aria-hidden="true" aria-label="Ranking diario EXPLORA" class="performance-screen" id="performanceScreen">
+<div class="performance-screen-shell">
+<header class="performance-screen-header">
+<button aria-label="Volver" class="performance-screen-back" id="performanceBackBtn" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M15 5 8 12l7 7"></path></svg>
+</button>
+<div class="performance-screen-heading">
+<h1>RANKING DIARIO</h1>
+<p>Actualización en tiempo real</p>
+</div>
+<button aria-label="Actualizar ranking" class="performance-screen-refresh" id="performanceRefreshBtn" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.2 5.5"></path><path d="M20 4v7h-7"></path></svg>
+</button>
+</header>
+<div aria-label="Secciones del ranking" class="performance-tabs" role="tablist">
+<button class="performance-tab is-active" data-performance-tab="ranking" type="button">RANKING DIARIO</button>
+<button class="performance-tab" data-performance-tab="derivations" type="button">DERIVACIONES</button>
+</div>
+<section class="performance-panel is-active" data-performance-panel="ranking" id="performanceRankingPanel">
+<article class="performance-explanation-card performance-rules-card">
+<h2>CÓMO FUNCIONA EL RANKING DIARIO</h2>
+<p>El líder se determina con la facturación válida registrada entre las 00:00 y las 23:59:59 de cada día operativo.</p>
+<p>Siempre existe un único líder cuando hay actividad. En caso de igualdad se compara la cantidad de servicios, quién alcanzó primero el monto y finalmente el driverId.</p>
+<div class="performance-rule-example"><strong>BONO DEL DÍA</strong><span>El ganador definitivo recibe $20.000 a favor en el cierre semanal.</span></div>
+<p>El bono no aumenta la facturación ni modifica el ranking del mismo día.</p>
+<p>El ranking visible reinicia diariamente a las 00:00 y el resultado anterior queda bloqueado.</p>
+</article>
+<div class="performance-ranking-list" id="performanceRankingList"><article class="daily-leader-card is-empty" data-daily-state="empty"><span class="daily-leader-kicker">LÍDER DEL DÍA</span><p class="daily-leader-empty-copy">Calculando ranking actual...</p></article></div>
+<div aria-live="polite" aria-atomic="true" class="personal-record-host is-detail" id="personalRecordDetailHost"><article class="personal-record-card is-neutral"><span class="personal-record-kicker">RÉCORD PERSONAL EXPLORA</span><strong>Estamos calculando tu progreso</strong><small>Sincronizando información confirmada…</small></article></div>
+</section>
+<section class="performance-panel" data-performance-panel="derivations" id="performanceDerivationsPanel">
+<article class="performance-explanation-card performance-rules-card derivation-ranking-rules">
+<h2>CÓMO FUNCIONAN LAS DERIVACIONES</h2>
+<p>El ranking se ordena por el dinero derivado que ya fue aceptado y facturado.</p>
+<p>El emisor suma el monto final del servicio. El receptor no suma dinero derivado.</p>
+<p>El monto verde muestra el bono proyectado del 10%.</p>
+<div class="performance-rule-example"><strong>EJEMPLO</strong><span>Si Marcelo lleva $300.000 derivados, su bono proyectado es +$30.000.</span></div>
+<p>El ranking de derivaciones se calcula y reinicia cada sábado a las 00:00.</p>
+</article>
+<div class="ranking-derived-heading"><span>RANKING DE DERIVACIONES</span><small>Ordenado por dinero derivado facturado</small></div>
+<div class="performance-ranking-list performance-derivation-money-list" id="performanceDerivationsList"></div>
+</section>
+<div aria-live="polite" class="performance-screen-status" id="performanceScreenStatus"></div>
+</div>
+</section>
+<div aria-hidden="true" class="performance-diagnostic-backdrop" id="performanceDiagnosticBackdrop">
+<section aria-labelledby="performanceDiagnosticTitle" aria-modal="true" class="performance-diagnostic-card" role="dialog">
+<header class="performance-diagnostic-head">
+<div><strong id="performanceDiagnosticTitle">EXPLORA · DIAGNÓSTICO</strong><small>El diagnóstico permanecerá visible hasta cerrarlo manualmente.</small></div>
+<button aria-label="Cerrar diagnóstico" id="performanceDiagnosticCloseBtn" type="button">×</button>
+</header>
+<pre class="performance-diagnostic-text" id="performanceDiagnosticText"></pre>
+<div class="performance-diagnostic-actions">
+<button class="performance-diagnostic-copy" id="performanceDiagnosticCopyBtn" type="button">COPIAR ERROR</button>
+<button class="performance-diagnostic-close-action" id="performanceDiagnosticCloseActionBtn" type="button">CERRAR</button>
+</div>
+</section>
+</div>
+<div aria-hidden="true" aria-live="polite" class="explora-success-backdrop" id="exploraSuccessBackdrop">
+<section aria-labelledby="exploraSuccessTitle" aria-modal="true" class="explora-success-card" role="dialog">
+<div class="explora-success-icon">✓</div><h2 id="exploraSuccessTitle">¡EXITOSO!</h2>
+<p id="exploraSuccessMessage">Operación registrada correctamente.</p>
+<button id="exploraSuccessAccept" type="button">ACEPTAR</button>
+</section>
+</div>
+<div aria-hidden="true" class="launch-confirm-backdrop" id="launchConfirmBackdrop">
+<section aria-labelledby="launchConfirmTitle" aria-modal="true" class="launch-confirm-card" data-status="confirm" id="launchConfirmCard" role="dialog">
+<div class="launch-status-badge" id="launchStatusBadge">REINICIO OPERATIVO TOTAL</div>
+<h2 id="launchConfirmTitle">REINICIO OPERATIVO TOTAL</h2>
+<div id="launchConfirmCopy"></div>
+<div class="launch-reset-details" hidden="" id="launchResetPreview"></div>
+<label class="launch-reset-confirm-label" for="launchConfirmPhrase" id="launchPhraseLabel">Escribí exactamente <strong>LANZAR EXPLORA</strong></label>
+<input autocapitalize="characters" autocomplete="off" id="launchConfirmPhrase" inputmode="text" placeholder="LANZAR EXPLORA" spellcheck="false" type="text"/>
+<label class="launch-reset-second-confirm" id="launchSecondConfirmWrap"><input id="launchSecondConfirm" type="checkbox"/> <span>CONFIRMAR REINICIO TOTAL</span></label>
+<div class="launch-reset-progress" hidden="" id="launchResetProgress">
+<div class="launch-reset-progress-head"><strong id="launchResetPhase">Preparando…</strong><span id="launchResetPercent">0%</span></div>
+<div class="launch-reset-progress-track"><i id="launchResetProgressBar"></i></div>
+</div>
+<div class="launch-reset-details" hidden="" id="launchResetDetails"></div>
+<div aria-live="polite" class="admin-shared-status" id="launchConfirmMessage" role="status"></div>
+<section aria-live="polite" class="storage-permission-diagnostic" hidden="" id="storagePermissionDiagnostic">
+<header><div><strong>DIAGNÓSTICO DE AUTORIZACIÓN STORAGE</strong><small>Visible exclusivamente para Admin. No muestra tokens completos.</small></div></header>
+<pre id="storagePermissionDiagnosticText">Sin ejecutar.</pre>
+<div class="storage-permission-route-results" id="storagePermissionRouteResults"></div>
+<div class="storage-permission-actions">
+<button id="storagePermissionTestBtn" type="button">PROBAR PERMISOS STORAGE</button>
+<button id="storagePermissionCopyBtn" type="button">COPIAR INFORME</button>
+</div>
+</section>
+<button class="launch-storage-retry" disabled="" hidden="" id="launchStorageRetryBtn" type="button">REINTENTAR LIMPIEZA DE STORAGE</button>
+<div class="launch-confirm-actions" id="launchConfirmActions">
+<button class="launch-cancel" id="launchCancelBtn" type="button">CANCELAR</button>
+<button class="launch-danger" data-mode="execute" disabled="" id="launchExecuteBtn" type="button">CONFIRMAR REINICIO TOTAL</button>
+</div>
+</section>
+</div>
+<div aria-hidden="true" class="admin-driver-simulation-diagnostic" id="adminDriverSimulationDiagnostic">
+<section aria-modal="true" class="admin-driver-simulation-diagnostic-card" role="alertdialog">
+<header class="admin-driver-simulation-diagnostic-head"><div><strong>EXPLORA - ERROR SIMULATION_RANKING_REPAIR</strong><small>El panel permanece visible hasta cierre manual.</small></div><button aria-label="Cerrar" id="adminDriverSimulationDiagnosticClose" type="button">×</button></header>
+<pre id="adminDriverSimulationDiagnosticText">—</pre>
+<div class="admin-driver-simulation-diagnostic-actions"><button class="admin-driver-simulation-diagnostic-copy" id="adminDriverSimulationDiagnosticCopy" type="button">COPIAR ERROR</button><button id="adminDriverSimulationDiagnosticCloseBottom" type="button">CERRAR</button></div>
+</section>
+</div>
+<div class="dialog-backdrop" id="dialogBackdrop" role="presentation">
+<section aria-describedby="dialogText" aria-labelledby="dialogTitle" aria-modal="true" class="dialog" role="dialog">
+<p class="dialog-kicker">EXPLORA</p>
+<h2 id="dialogTitle">Acción</h2>
+<p id="dialogText">Esta sección está preparada para conectar su función más adelante.</p>
+<div class="dialog-actions">
+<button id="dialogCancel" type="button">Cancelar</button>
+<button class="primary" id="dialogAccept" type="button">Aceptar</button>
+</div>
+</section>
+</div>
+<script id="exploraOperationalClockV251" src="js/segments/02-script.js"></script>
+<script id="exploraFastCacheV224" src="js/segments/03-script.js"></script>
+<script src="js/segments/04-script.js"></script>
+<script id="exploraUiCoreV188" src="js/segments/05-script.js"></script>
+<script id="exploraReceiptUIV197" src="js/segments/06-script.js"></script>
+<script id="exploraBillingV188" src="js/segments/07-script.js?v=2487-billing-no-mileage-gate"></script>
+<script id="exploraPerformanceNavigationV210" src="js/segments/08-script.js"></script>
+<script id="exploraReceiptsV247" src="js/segments/09-script.js?v=247"></script>
+<script id="exploraProductionPolicyV251" src="js/segments/10-script.js"></script>
+<script src="js/segments/11-script.mjs?v2491-liquidation-expense-detail" type="module"></script>
+<!-- EXPLORA v160: motor semanal unificado + splash seguro + históricos financieros -->
+<link href="css/segments/32-style.css?v=2445-finance-nav-fix" rel="stylesheet"/>
+<script id="exploraSplashEmergencyPatch" src="js/segments/12-script.js"></script>
+<script id="exploraUnifiedWeeklyFinanceModule" src="js/segments/13-script.mjs?v=248-payment-receipts-facturaste-gastaste-finance-nav-fix" type="module"></script>
+<script id="exploraDebtNotificationsV189" src="js/segments/14-script.mjs" type="module"></script>
+<script id="exploraAdminDebtLaunchV190" src="js/segments/15-script.mjs?v=226" type="module"></script>
+<!-- EXPLORA v256 · derivaciones recibidas primero, pestañas separadas y flujo operativo estable -->
+<script id="exploraDerivationsModule" src="js/segments/16-script.mjs" type="module"></script>
+<script id="explora-derivation-ranking-stable-renderer" src="js/segments/17-script.js"></script>
+<script id="exploraPerformanceEngineV252" src="js/segments/18-script.mjs?v2442-weekly-payment-production" type="module"></script>
+<script id="exploraAdminDriverSimulationV234" src="js/segments/19-script.mjs?v2442-weekly-payment-production" type="module"></script>
+<link href="css/segments/33-style.css" rel="stylesheet"/>
+<script id="exploraV191FormEnhancements" src="js/segments/21-script.js"></script>
+<script id="exploraBottomNavScrollRenderV232" src="js/segments/22-script.js"></script>
+<!-- EXPLORA RECEIPTS REPAIR v198 -->
+<script id="exploraLoanRequirementsViewV250" src="js/segments/23-script.js"></script>
+<script id="exploraFirestoreGlobalRealtimeSyncV266" src="js/segments/24-script.mjs?v=244" type="module"></script>
+<!-- EXPLORA v259 · ADMIN → diagnóstico de identidad, proyecto, bucket y permiso list antes del reintento Storage -->
+<script id="exploraOperationalResetV259" src="js/segments/25-script.mjs" type="module"></script>
+<!-- EXPLORA v260 · performance snapshot monotónico, UID canónico y caché schema 260 -->
+<script id="exploraGlobalRankingIndependentAuthV275" src="js/segments/26-script.mjs" type="module"></script>
+<script id="explora-v270-derivation-financial-repair" src="js/segments/27-script.js"></script><script id="explora-v272-derivation-ranking-definitive-repair" src="js/segments/28-script.mjs" type="module"></script>
+<link href="css/segments/34-style.css" rel="stylesheet"/>
+
+<script id="explora-sequential-validation-engine" src="js/segments/30-script.js"></script>
+<script id="explora-v278-dashboard-ranking-loan-definitive-js" src="js/segments/31-script.js"></script>
+<script id="explora-vehicle-management-dashboard-js" src="js/segments/32-script.mjs?v=227" type="module"></script>
+<link href="css/segments/35-style.css" rel="stylesheet"/>
+<script id="explora-v280-vehicle-management-stability-fix" src="js/segments/33-script.js?v=227"></script>
+<link href="css/segments/43-style.css?v=225" rel="stylesheet"/>
+<link href="css/segments/44-style.css?v=2491-liquidation-expense-detail" rel="stylesheet"/>
+<link href="css/segments/45-style.css?v=2440-weekly-closure-cash-record-recovery" rel="stylesheet"/>
+<link href="css/segments/46-style.css?v=247" rel="stylesheet"/>
+<script id="explora-v223-driver-incidents" src="js/segments/34-script.mjs?v=227" type="module"></script>
+<link href="css/segments/36-style.css" rel="stylesheet"/>
+<link href="css/segments/37-style.css" rel="stylesheet"/>
+<script id="explora-v220-unified-weekly-closure" src="js/segments/35-script.mjs?v2442-weekly-payment-production" type="module"></script>
+<script id="explora-v233-daily-ranking-weekly-plaques" src="js/segments/43-script.mjs?v2442-weekly-payment-production" type="module"></script>
+<link href="css/segments/51-style.css?v=2484-weekly-mileage-modal-ux" rel="stylesheet"/>
+<script id="explora-weekly-mileage-v15-session-isolation" src="js/segments/49-script.mjs?v=2488-mileage-close-fast" type="module"></script>
+<link href="css/segments/49-style.css?v=2456-personal-record-server-authoritative" rel="stylesheet"/>
+<link href="css/segments/50-style.css?v=2458-admin-driver-production-safe" rel="stylesheet"/>
+<script id="explora-personal-record-production-safe" src="js/segments/44-script.mjs?v=2456-personal-record-server-authoritative" type="module"></script>
+<link href="css/segments/38-style.css?v=2445-finance-nav-fix" rel="stylesheet"/>
+<script id="exploraChromiumAuditRepairRuntimeV284" src="js/segments/36-script.js"></script>
+<script id="exploraIdleDashboardRestartV1" src="js/segments/37-script.js"></script>
+<script id="exploraCycleHardReloadButtonV1" src="js/segments/38-script.js"></script>
+<!-- EXPLORA · REGISTRAR SERVICIO PARA CHOFER DESDE ADMIN -->
+<link href="css/segments/39-style.css" rel="stylesheet"/>
+<section aria-hidden="true" class="admin-billing-driver-screen" id="adminBillingDriverScreen">
+<div class="admin-billing-driver-shell">
+<header class="admin-billing-driver-head">
+<button aria-label="Volver" id="adminBillingDriverBack" type="button">‹</button>
+<div class="admin-billing-driver-title"><h1>REGISTRAR SERVICIO</h1><p>Cargar un cobro real en nombre de un chofer</p></div>
+<span></span>
+</header>
+<section class="admin-billing-driver-card">
+<div class="admin-billing-driver-field"><label for="adminBillingDriverSelect">CHOFER</label><select id="adminBillingDriverSelect"><option value="">Cargando choferes…</option></select></div>
+<div class="admin-billing-driver-field"><label for="adminBillingDriverAmount">MONTO DEL SERVICIO</label><input autocomplete="off" id="adminBillingDriverAmount" inputmode="decimal" placeholder="Ej.: 25000"/></div>
+<div class="admin-billing-driver-field"><label>MEDIO DE PAGO</label><div class="admin-billing-driver-methods" id="adminBillingDriverMethods"><button class="admin-billing-driver-method is-selected" data-method="cash" type="button">EFECTIVO</button><button class="admin-billing-driver-method" data-method="transfer" type="button">TRANSFERENCIA</button><button class="admin-billing-driver-method" data-method="card" type="button">TARJETA</button></div></div>
+<div class="admin-billing-driver-field"><label for="adminBillingDriverDescription">DETALLE OPCIONAL</label><textarea id="adminBillingDriverDescription" maxlength="180" placeholder="Ej.: Aeropuerto a hotel"></textarea></div>
+<div class="admin-billing-driver-summary"><article><span>Semana operativa</span><strong id="adminBillingDriverPeriod">—</strong></article><article><span>Cargado por</span><strong>Administrador</strong></article></div>
+<div class="admin-billing-driver-note">El servicio se atribuye al chofer seleccionado y participa en su facturación, ranking diario y cierre semanal. El documento conserva la identidad del administrador que realizó la carga.</div>
+<button class="admin-billing-driver-submit" id="adminBillingDriverSubmit" type="button">REGISTRAR SERVICIO</button>
+<div aria-live="polite" class="admin-billing-driver-status" id="adminBillingDriverStatus"></div>
+</section>
+</div>
+</section>
+<script id="exploraAdminBillingForDriverV1" src="js/segments/39-script.mjs" type="module"></script>
+<link href="css/segments/40-style.css" rel="stylesheet"/>
+<script id="exploraNoVisualDiagnosticsRuntimeV289" src="js/segments/40-script.js"></script>
+<link href="css/segments/41-style.css" rel="stylesheet"/>
+<div class="admin-date-mode-banner" id="adminDateModeBanner" role="status"><span><b>MODO FECHA DE PRUEBA GLOBAL</b><br/><span id="adminDateModeText">—</span></span><button id="adminDateBannerRestore" type="button">VOLVER A FIRESTORE</button></div>
+<div aria-hidden="true" class="admin-date-backdrop" id="adminDateBackdrop"><section aria-labelledby="adminDateTitle" aria-modal="true" class="admin-date-card" role="dialog"><p class="admin-date-kicker">ADMIN · SIMULACIÓN GLOBAL</p><h2 id="adminDateTitle">FECHA DE PRUEBA</h2><p>Cambia la fecha operativa para Admin y todos los choferes. Los cierres, períodos y comprobantes usarán esta misma fecha hasta volver a Firestore.</p><div class="admin-date-current"><span>FECHA OPERATIVA ACTUAL</span><strong id="adminDateCurrent">—</strong><span>SEMANA ACTIVA</span><strong id="adminDateWeek">—</strong></div><label for="adminDateInput">Nueva fecha y hora<input id="adminDateInput" step="60" type="datetime-local"/></label><p class="admin-date-warning">La fecha se guarda globalmente en Firestore. Todos los usuarios conectados recibirán el cambio; esta app se recargará para reconstruir los paneles.</p><div class="admin-date-message" id="adminDateMessage" role="status"></div><div class="admin-date-actions"><button class="admin-date-cancel" id="adminDateCancel" type="button">CANCELAR</button><button class="admin-date-apply" id="adminDateApply" type="button">APLICAR FECHA</button><button class="admin-date-firestore" id="adminDateRestore" type="button">VOLVER A FECHA FIRESTORE</button></div></section></div>
+<script id="explora-v290-admin-date-simulator" src="js/segments/41-script.js"></script>
+<link href="css/segments/42-style.css" rel="stylesheet"/>
+<script id="exploraGlobalClockAppWideSync" src="js/segments/42-script.js"></script>
+<link href="css/segments/47-style.css?v=2411-logo" rel="stylesheet"/>
+<link href="css/segments/48-style.css?v=2412-ranking-mobile" rel="stylesheet"/>
+<link href="css/segments/52-style.css?v=pay-home-on-demand-closure" rel="stylesheet"/>
+<script id="exploraPagoHomeOnDemandClosure" src="js/segments/52-script.mjs?v=pay-home-on-demand-closure" type="module"></script>
+<script defer="" id="explora-pwa-registration" src="js/pwa-register.js?v2443-weekly-production-integrity"></script>
+</body>
+</html>
