@@ -1,7 +1,7 @@
-/* Compatibilidad validada: v2507-closure-button-gating */
+/* Compatibilidad validada: v2508-reverse-requester-buttons */
 /* EXPLORA PWA service worker · v2.4.93 */
 const CACHE_PREFIX = 'explora-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v2507-closure-button-gating`;
+const CACHE_NAME = `${CACHE_PREFIX}v2508-reverse-requester-buttons`;
 const APP_SHELL = [
   './',
   './index.html',
@@ -17,7 +17,7 @@ const APP_SHELL = [
   './js/segments/01-script.js?v2442-weekly-payment-production',
   './js/segments/18-script.mjs?v2442-weekly-payment-production',
   './js/segments/19-script.mjs?v2442-weekly-payment-production',
-  './js/segments/11-script.mjs?v2507-closure-button-gating',
+  './js/segments/11-script.mjs?v2508-reverse-requester-buttons',
   './js/segments/35-script.mjs?v2442-weekly-payment-production',
   './js/core/weekly-core.mjs?v2442-weekly-payment-production',
   './css/segments/45-style.css?v=2440-weekly-closure-cash-record-recovery',
