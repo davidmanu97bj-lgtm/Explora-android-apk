@@ -754,3 +754,29 @@
   #billingForm .billing-transfer-receipt{padding:15px!important;border-radius:22px!important;}
   #billingForm .billing-action{height:56px!important;min-height:56px!important;border-radius:19px!important;}
 }
+
+
+/* EXPLORA v3.9.24 · Modal cobro sin fondo transparente al abrir teclado */
+#billingFormBackdrop.billing-form-backdrop{
+  background:#f5f6fb!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+  opacity:1!important;
+}
+#billingFormBackdrop.billing-form-backdrop::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  background:#f5f6fb;
+  pointer-events:none;
+  z-index:-1;
+}
+#billingForm.billing-form-card{
+  background:#ffffff!important;
+  box-shadow:0 14px 46px rgba(29,33,55,.12)!important;
+}
+@media(max-width:390px){
+  #billingFormBackdrop.billing-form-backdrop{
+    background:#f5f6fb!important;
+  }
+}
