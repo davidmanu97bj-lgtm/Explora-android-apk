@@ -1,7 +1,7 @@
-/* Compatibilidad validada: v3924-billing-modal-solid-background */
+/* Compatibilidad validada: v3926-billing-logo-dark-login-bg */
 /* EXPLORA PWA service worker · v2.5.1 */
 const CACHE_PREFIX = 'explora-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v3924-billing-modal-solid-background`;
+const CACHE_NAME = `${CACHE_PREFIX}v3926-billing-logo-dark-login-bg`;
 const APP_SHELL = [
   './',
   './index.html',
