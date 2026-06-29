@@ -5,7 +5,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 (() => {
   "use strict";
 
-  const VERSION = "explora-pago-home-v15-proof-status-detail";
+  const VERSION = "explora-pago-home-v16-proof-final-clean";
   const AR_TZ = "America/Argentina/Cordoba";
   const $ = id => document.getElementById(id);
   const state = {
@@ -694,6 +694,19 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     return "Cierre solicitado";
   }
 
+  function closureIsCompleted(closure = {}) {
+    const status = safe(closure.status || closure.estado || closure.statusLabel).toLowerCase();
+    return /confirmed|confirmado|completed|closed|cerrado|al_dia|al día|pagado/.test(status);
+  }
+
+  function closurePayerClass(closure = {}) {
+    const due = number(closure.amountDueFromDriver || closure.amountFromDriver || 0);
+    const toDriver = number(closure.amountDueToDriver || closure.amountToDriver || 0);
+    if (due > 0) return "is-paid-by-driver";
+    if (toDriver > 0) return "is-paid-by-explora";
+    return "is-balanced-closure";
+  }
+
   function closureActionForViewer(closure = {}) {
     const due = number(closure.amountDueFromDriver || 0);
     const toDriver = number(closure.amountDueToDriver || 0);
@@ -1002,11 +1015,11 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       });
     }
 
-    for (const row of state.closures.filter(r => safe(r.closureMode || r.periodType) === "on_demand")) {
+    for (const row of state.closures.filter(r => safe(r.closureMode || r.periodType) === "on_demand").filter(closureIsCompleted)) {
       const at = rowMs(row);
       const closureKind = closureKindOf(row);
       rows.push({
-        at, type:"closure", closureId:safe(row.id || row.closureId), title:`${dateShort(at)} · ${closureTitle(closureKind)}`,
+        at, type:"closure", closureId:safe(row.id || row.closureId), tone:closurePayerClass(row), title:`${dateShort(at)} · ${closureTitle(closureKind)}`,
         meta:closureStatusText(row),
         detail:`A rendir: ${currency(row.amountDueFromDriver || 0)} · A cobrar: ${currency(row.amountDueToDriver || 0)}`,
         amount:0
@@ -1131,16 +1144,10 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
         ["Caja chica 5% efectivo", currency(summary.cashboxInDriver || 0)]
       );
     }
-    if (pending) {
-      lines.unshift(
-        ["Anterior pendiente de cierre", currency(pendingValueForTab(pending, state.tab))],
-        ["Resultado pendiente", pendingResultLine(pending)]
-      );
-    }
+    // Si hay un cierre pendiente, el período nuevo ya arranca desde cero por el corte.
+    // No se muestran montos anteriores en la tarjeta principal para evitar mezclar cierre viejo con movimientos nuevos.
     amount.textContent = currency(main);
-    subtitle.innerHTML = pending
-      ? `${esc(sub)} <b>pendiente de cierre</b>`
-      : `${esc(sub)} <b>${tabSummary(summary, state.tab).resetMs ? "desde último cierre" : "sin cierre previo"}</b>`;
+    subtitle.innerHTML = `${esc(sub)} <b>${tabSummary(summary, state.tab).resetMs ? "desde último cierre" : "sin cierre previo"}</b>`;
     pillLabel.textContent = pill;
     pillAmount.textContent = currency(pillValue);
     extra.innerHTML = lines.map(([label,value]) => `<div><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`).join("");
@@ -1166,8 +1173,9 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     if (!box || !text) return;
     const pending = stateForButton.visible ? pendingClosureFor(getDriverUid(), kind) : null;
     state.pendingClosure = pending;
-    box.hidden = !pending;
-    if (pending) {
+    const showPendingCard = !!pending && !closureHasProof(pending) && !closureIsCompleted(pending);
+    box.hidden = !showPendingCard;
+    if (showPendingCard) {
       const labelEl = box.querySelector("b");
       if (labelEl) labelEl.textContent = closureStatusText(pending);
       const due = number(pending.amountDueFromDriver || 0);
@@ -1190,7 +1198,8 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     if (!rows.length) { list.innerHTML = `<div class="pay-activity-empty">Todavía no hay cobros ni gastos en el ciclo abierto.</div>`; return; }
     list.innerHTML = rows.map(row => {
       const closureAttr = row.type === "closure" && row.closureId ? ` data-pay-activity-closure="${esc(row.closureId)}" role="button" tabindex="0"` : "";
-      return `<article class="pay-activity ${row.type === "closure" ? "is-clickable" : ""}"${closureAttr}>
+      const closureTone = row.type === "closure" ? ` ${esc(row.tone || "")}` : "";
+      return `<article class="pay-activity ${row.type === "closure" ? "is-clickable" : ""}${closureTone}"${closureAttr}>
         <span class="pay-activity-icon">${activityIcon(row.type)}</span>
         <div><div class="pay-activity-title">${esc(row.title)}</div><div class="pay-activity-meta">${esc(row.meta)}</div><div class="pay-activity-detail">${esc(row.detail)}</div></div>
         <strong class="pay-activity-amount ${row.positive ? "is-positive" : row.negative ? "is-negative" : ""}">${row.amount ? (row.amount > 0 ? "+" : "") + currency(row.amount) : ""}</strong>
@@ -1300,57 +1309,54 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     cancel.textContent = "Cancelar";
     submit.className = "pay-closure-primary";
     submit.disabled = false;
-    if (state.modalMode === "confirm" && closure) {
-      const due = number(closure.amountDueFromDriver || 0), toDriver = number(closure.amountDueToDriver || 0);
+
+    if (closure) {
+      const action = closureActionForViewer(closure);
+      const due = number(closure.amountDueFromDriver || 0);
+      const toDriver = number(closure.amountDueToDriver || 0);
       const proof = closureHasProof(closure);
-      title.textContent = "Explora pidió el cierre";
-      if (due > 0 && !proof) {
-        subtitle.textContent = "Resolvé tu situación: transferí a Explora y cargá el comprobante.";
-        fileField.hidden = false;
-        submit.disabled = false;
-        submit.textContent = "Subir comprobante";
-      } else if (toDriver > 0 && proof) {
-        subtitle.textContent = "Explora cargó el comprobante. Revisalo y confirmá recibido.";
-        fileField.hidden = true;
-        submit.disabled = false;
-        submit.textContent = "Confirmar recibido";
-      } else {
-        subtitle.textContent = proof ? "Comprobante enviado. Esperando confirmación." : "Revisá el detalle del cierre solicitado.";
-        fileField.hidden = true;
-        submit.disabled = due > 0 && proof;
-        submit.textContent = proof ? "Comprobante enviado" : "Confirmar visto";
+      const completed = closureIsCompleted(closure);
+      const uploadNeeded = (action === "driver_upload" || action === "admin_upload") && !proof && !completed;
+      fileField.hidden = !uploadNeeded;
+      summary.innerHTML = closureDetailSummary(closure, kind, isAdmin());
+
+      if (state.modalMode === "confirm") {
+        title.textContent = "Explora pidió el cierre";
+        if (action === "driver_upload") {
+          subtitle.textContent = "Resolvé tu situación: transferí a Explora y cargá el comprobante.";
+          submit.disabled = false;
+          submit.textContent = "Subir comprobante";
+        } else if (action === "driver_review") {
+          subtitle.textContent = "Explora cargó el comprobante. Revisalo y confirmá recibido.";
+          submit.disabled = false;
+          submit.textContent = "Confirmar recibido";
+        } else {
+          subtitle.textContent = completed ? "Cierre completo." : proof ? "Comprobante enviado. Esperando confirmación." : "Revisá el detalle del cierre solicitado.";
+          submit.disabled = true;
+          submit.textContent = proof ? "Comprobante enviado" : "Sin acción";
+        }
+        return;
       }
-      summary.innerHTML = closureDetailSummary(closure, kind);
-      return;
-    }
-    if (state.modalMode === "admin-review" && closure && isAdmin()) {
-      const due = number(closure.amountDueFromDriver || 0), toDriver = number(closure.amountDueToDriver || 0);
-      const proof = closureHasProof(closure);
-      title.textContent = `Revisar ${closureTitle(kind).toLowerCase()}`;
-      if (toDriver > 0 && !proof) {
-        subtitle.textContent = "El chofer pidió el cierre. Pagá y cargá el comprobante para notificarlo.";
-        fileField.hidden = false;
-        submit.disabled = false;
-        submit.textContent = "Enviar comprobante";
-      } else if (due > 0 && proof) {
-        subtitle.textContent = "El chofer cargó el comprobante. Confirmá si la foto está correcta.";
-        fileField.hidden = true;
-        submit.disabled = false;
-        submit.textContent = "Confirmar cierre";
-      } else if (toDriver > 0 && proof) {
-        subtitle.textContent = "Comprobante enviado al chofer.";
-        fileField.hidden = true;
-        submit.disabled = false;
-        submit.textContent = "Cerrar cierre";
-      } else {
-        subtitle.textContent = "Esperando comprobante del chofer.";
-        fileField.hidden = true;
-        submit.disabled = true;
-        submit.textContent = "Esperando";
+
+      if (state.modalMode === "admin-review" && isAdmin()) {
+        title.textContent = `Revisar ${closureTitle(kind).toLowerCase()}`;
+        if (action === "admin_upload") {
+          subtitle.textContent = "El chofer pidió el cierre. Pagá y cargá el comprobante para notificarlo.";
+          submit.disabled = false;
+          submit.textContent = "Enviar comprobante";
+        } else if (action === "admin_review") {
+          subtitle.textContent = "El chofer cargó el comprobante. Confirmá si la foto está correcta.";
+          submit.disabled = false;
+          submit.textContent = "Confirmar cierre";
+        } else {
+          subtitle.textContent = completed ? "Cierre completo." : proof ? "Comprobante cargado. No corresponde subir otro comprobante." : "Esperando comprobante de quien debe pagar.";
+          submit.disabled = true;
+          submit.textContent = proof ? "Comprobante recibido" : "Esperando";
+        }
+        return;
       }
-      summary.innerHTML = closureDetailSummary(closure, kind, true);
-      return;
     }
+
     title.textContent = isAdmin() ? `Pedir ${closureTitle(kind).toLowerCase()} a un chofer` : `Pedir ${closureTitle(kind).toLowerCase()}`;
     subtitle.textContent = isAdmin()
       ? (getDriverUid() ? `Chofer seleccionado: ${state.selectedDriverName || "chofer"}. El corte será inmediato.` : "Seleccioná primero un chofer para cargar sus datos y pedir el cierre.")
@@ -1360,11 +1366,9 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     if (kind === "caja_chica") {
       summary.innerHTML = `<article><span>Efectivo base</span><strong>${currency(latest.gross || 0)}</strong></article><article><span>Caja chica 5%</span><strong>${currency(latest.cashboxTotal || 0)}</strong></article><article><span>En poder del chofer</span><strong>${currency(latest.cashboxInDriver || 0)}</strong></article><article><span>Chofer pasa a Explora</span><strong>${currency(latest.amountFromDriver || 0)}</strong></article>`;
     } else if (kind === "gastos") {
-      summary.innerHTML = `<article><span>Gastos abiertos</span><strong>${currency(latest.expenseTotal)}</strong></article><article><span>Parte chofer 50%</span><strong>${currency(latest.driverExpenseShare || 0)}</strong></article><article><span>Explora reintegra al chofer</span><strong>${currency(latest.amountToDriver)}</strong></article>`;
+      summary.innerHTML = `<article><span>Gastos cargados</span><strong>${currency(latest.expenseTotal || 0)}</strong></article><article><span>Parte chofer</span><strong>${currency(latest.driverExpenseShare || 0)}</strong></article><article><span>Parte Explora</span><strong>${currency(latest.exploraExpenseShare || 0)}</strong></article><article><span>Explora reintegra</span><strong>${currency(latest.amountToDriver || 0)}</strong></article>`;
     } else {
-      const resultLabel = latest.amountToDriver > 0 ? "Explora paga al chofer" : latest.amountFromDriver > 0 ? "Chofer paga a Explora" : "Facturación equilibrada";
-      const resultValue = Math.max(latest.amountToDriver || 0, latest.amountFromDriver || 0);
-      summary.innerHTML = `<article><span>Efectivo chofer</span><strong>${currency(latest.cashInDriver || 0)}</strong></article><article><span>Digital Explora</span><strong>${currency(latest.nonCashInExplora || 0)}</strong></article><article><span>Total facturado</span><strong>${currency(latest.gross || 0)}</strong></article><article><span>Parte de cada uno</span><strong>${currency(latest.billingShareEach || 0)}</strong></article><article><span>${esc(resultLabel)}</span><strong>${currency(resultValue)}</strong></article>`;
+      summary.innerHTML = `<article><span>Efectivo chofer</span><strong>${currency(latest.cashInDriver || 0)}</strong></article><article><span>Digital Explora</span><strong>${currency(latest.nonCashInExplora || 0)}</strong></article><article><span>Total facturado</span><strong>${currency(latest.gross || 0)}</strong></article><article><span>Parte de cada uno</span><strong>${currency(latest.billingShareEach || 0)}</strong></article><article><span>Resultado</span><strong>${latest.amountFromDriver > 0 ? `Chofer paga ${currency(latest.amountFromDriver)}` : latest.amountToDriver > 0 ? `Explora paga ${currency(latest.amountToDriver)}` : "Equilibrado"}</strong></article>`;
     }
   }
 
