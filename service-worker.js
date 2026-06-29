@@ -1,7 +1,7 @@
-/* Compatibilidad validada: v3910-perfil-whatsapp-cierres */
+/* Compatibilidad validada: v3911-logo-real-header */
 /* EXPLORA PWA service worker · v2.5.1 */
 const CACHE_PREFIX = 'explora-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v3910-perfil-whatsapp-cierres`;
+const CACHE_NAME = `${CACHE_PREFIX}v3911-logo-real-header`;
 const APP_SHELL = [
   './',
   './index.html',
@@ -17,7 +17,7 @@ const APP_SHELL = [
   './js/segments/01-script.js?v2442-weekly-payment-production',
   './js/segments/18-script.mjs?v2442-weekly-payment-production',
   './js/segments/19-script.mjs?v2442-weekly-payment-production',
-  './js/segments/11-script.mjs?v2508-reverse-requester-buttons',
+  './js/segments/11-script.mjs?v3911-logo-real-header',
   './js/segments/35-script.mjs?v2442-weekly-payment-production',
   './js/core/weekly-core.mjs?v2442-weekly-payment-production',
   './css/segments/45-style.css?v=2440-weekly-closure-cash-record-recovery',
@@ -26,6 +26,7 @@ const APP_SHELL = [
   './css/segments/49-style.css?v=2456-personal-record-server-authoritative',
   './css/segments/50-style.css?v=2458-admin-driver-production-safe',
   './css/segments/51-style.css?v=2484-weekly-mileage-modal-ux',
+  './css/segments/02-style.css?v=3911-logo-real-header',
   './css/segments/52-style.css?v=3910-perfil-whatsapp-cierres',
   './js/segments/52-script.mjs?v=3910-perfil-whatsapp-cierres',
   './assets/icono_eficiencia_km.png',
@@ -40,7 +41,9 @@ const APP_SHELL = [
   './icons/icon-512-v2411.png',
   './icons/icon-maskable-512-v2411.png',
   './icons/explora-logo-horizontal-v2411.png',
-  './icons/explora-mark-transparent-v2411.png'
+  './icons/explora-mark-transparent-v2411.png',
+  './icons/explora-logo-real-mark-v3911.png',
+  './icons/explora-logo-real-horizontal-v3911.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -98,4 +101,4 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
-/* cache bump: v3910 perfil whatsapp cierres */
+/* cache bump: v3911 logo real header */
