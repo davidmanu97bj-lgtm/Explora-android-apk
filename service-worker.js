@@ -1,7 +1,7 @@
-/* Compatibilidad validada: v2503-more-white-exit */
+/* Compatibilidad validada: v2504-more-visible-fix */
 /* EXPLORA PWA service worker · v2.4.92 */
 const CACHE_PREFIX = 'explora-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v2503-more-white-exit`;
+const CACHE_NAME = `${CACHE_PREFIX}v2504-more-visible-fix`;
 const APP_SHELL = [
   './',
   './index.html',
@@ -17,7 +17,7 @@ const APP_SHELL = [
   './js/segments/01-script.js?v2442-weekly-payment-production',
   './js/segments/18-script.mjs?v2442-weekly-payment-production',
   './js/segments/19-script.mjs?v2442-weekly-payment-production',
-  './js/segments/11-script.mjs?v2503-more-white-exit',
+  './js/segments/11-script.mjs?v2504-more-visible-fix',
   './js/segments/35-script.mjs?v2442-weekly-payment-production',
   './js/core/weekly-core.mjs?v2442-weekly-payment-production',
   './css/segments/45-style.css?v=2440-weekly-closure-cash-record-recovery',
