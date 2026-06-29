@@ -498,3 +498,119 @@
   #billingForm.billing-form-card{border-radius:30px 30px 0 0!important;padding:22px 20px calc(16px + env(safe-area-inset-bottom))!important}
   #billingForm .billing-actions{grid-template-columns:1fr 1fr!important;gap:12px!important}
 }
+
+
+/* EXPLORA v3.9.22 · Ajuste fino visual cobros: bordes suaves, tonos equilibrados y composición simétrica */
+.new-service-screen{
+  background:linear-gradient(180deg,#f4da56 0%,#f4da56 29%,#f5f6fb 29%,#f5f6fb 100%)!important;
+}
+.new-service-header{
+  min-height:124px!important;
+  align-items:center!important;
+  grid-template-columns:64px minmax(0,1fr) 64px!important;
+  column-gap:16px!important;
+}
+.new-service-logo-wrap{
+  width:min(214px,46vw)!important;
+  min-height:64px!important;
+  padding:6px 12px!important;
+  border-radius:22px!important;
+  background:rgba(255,255,255,.10)!important;
+  border:1px solid rgba(255,255,255,.20)!important;
+  box-shadow:0 10px 24px rgba(111,87,20,.08), inset 0 1px 0 rgba(255,255,255,.34)!important;
+  backdrop-filter:blur(6px)!important;
+  -webkit-backdrop-filter:blur(6px)!important;
+}
+.new-service-brand-image{
+  width:min(170px,37vw)!important;
+  max-height:46px!important;
+  filter:contrast(1.07) saturate(1.06) drop-shadow(0 2px 4px rgba(67,51,11,.10))!important;
+}
+.new-service-title-block{margin:10px 0 20px!important}
+.new-service-title-block h1{letter-spacing:-.02em!important}
+.new-service-title-block p{margin-top:8px!important;color:#7a8093!important}
+.billing-method-grid{
+  gap:18px!important;
+  align-items:stretch!important;
+}
+.billing-method-card{
+  min-height:156px!important;
+  border:1px solid #e4e7f1!important;
+  border-radius:30px!important;
+  padding:20px 14px 18px!important;
+  justify-content:center!important;
+  box-shadow:0 10px 26px rgba(31,36,58,.055), inset 0 1px 0 rgba(255,255,255,.96)!important;
+}
+.billing-method-icon{
+  width:72px!important;
+  height:72px!important;
+  border-radius:26px!important;
+  background:#f2f4fd!important;
+}
+.billing-method-card strong{font-size:clamp(17px,4vw,19px)!important;line-height:1.06!important}
+.billing-method-card small{max-width:148px!important;color:#787f92!important;font-size:12px!important;line-height:1.2!important}
+.billing-info-note{
+  margin:20px 0 10px!important;
+  padding:18px 20px!important;
+  border:1px solid #e4e7f1!important;
+  border-radius:28px!important;
+  box-shadow:0 8px 22px rgba(31,36,58,.045)!important;
+}
+.billing-info-note span{width:40px!important;height:40px!important;border-radius:14px!important;display:grid!important;place-items:center!important}
+#billingForm.billing-form-card{
+  max-width:500px!important;
+  border-radius:30px 30px 0 0!important;
+  padding:22px 20px calc(18px + env(safe-area-inset-bottom))!important;
+  box-shadow:0 -18px 54px rgba(29,33,55,.16)!important;
+}
+#billingForm .billing-modal-content{padding:2px 2px calc(var(--safe-bottom-offset,28px) + 8px)!important}
+#billingForm .billing-form-head{
+  grid-template-columns:64px minmax(0,1fr)!important;
+  gap:16px!important;
+  margin-bottom:16px!important;
+}
+#billingForm .billing-form-icon{
+  width:64px!important;height:64px!important;border-radius:24px!important;background:#f1f4fd!important;
+}
+#billingForm .billing-form-title h2{
+  font-size:clamp(24px,6.8vw,32px)!important;
+  letter-spacing:-.03em!important;
+}
+#billingForm .billing-form-title p{font-size:14px!important;line-height:1.24!important;margin-top:6px!important}
+#billingForm .billing-invoice{border-radius:24px!important;box-shadow:none!important}
+#billingForm .billing-invoice-row{padding:15px 18px!important}
+#billingForm .billing-amount-section{margin-top:16px!important}
+#billingForm .billing-amount-box{
+  min-height:80px!important;
+  border-radius:26px!important;
+  border:1.5px solid #e6d7d9!important;
+  background:#fffafb!important;
+  box-shadow:none!important;
+}
+#billingForm .billing-amount-box.is-invalid{border-color:#ebcfd1!important;background:#fff7f7!important}
+#billingForm .billing-amount-box.is-valid{border-color:#c9e7d2!important;background:#f8fdfa!important}
+#billingForm .billing-transfer-receipt{
+  padding:18px!important;
+  border:1px solid #e4e7f1!important;
+  border-radius:24px!important;
+  box-shadow:none!important;
+}
+#billingForm .billing-actions{grid-template-columns:1fr 1fr!important;gap:14px!important;margin-top:20px!important}
+#billingForm .billing-action{height:60px!important;min-height:60px!important;border-radius:20px!important}
+#billingForm .billing-action--exit{background:#edf1f7!important}
+#billingForm .billing-action--primary,
+#billingForm .billing-action--primary.is-upload,
+#billingForm .billing-action--primary.is-finalize,
+#billingForm.has-receipt .billing-action--primary{box-shadow:0 12px 26px rgba(79,80,232,.18)!important}
+@media(max-width:390px){
+  .new-service-header{min-height:114px!important;grid-template-columns:56px minmax(0,1fr) 56px!important;column-gap:12px!important}
+  .new-service-logo-wrap{width:min(188px,44vw)!important;min-height:58px!important;padding:5px 10px!important;border-radius:20px!important}
+  .new-service-brand-image{width:min(150px,36vw)!important;max-height:40px!important}
+  .billing-method-grid{gap:14px!important}
+  .billing-method-card{min-height:150px!important;border-radius:28px!important;padding:18px 12px 16px!important}
+  .billing-method-icon{width:66px!important;height:66px!important;border-radius:24px!important}
+  #billingForm.billing-form-card{padding:20px 18px calc(16px + env(safe-area-inset-bottom))!important;border-radius:28px 28px 0 0!important}
+  #billingForm .billing-form-head{grid-template-columns:56px minmax(0,1fr)!important;gap:14px!important}
+  #billingForm .billing-form-icon{width:56px!important;height:56px!important;border-radius:22px!important}
+  #billingForm .billing-amount-box{min-height:76px!important;border-radius:24px!important}
+}
