@@ -5,7 +5,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 (() => {
   "use strict";
 
-  const VERSION = "explora-pago-home-v30-sin-rastros-cartel-amarillo";
+  const VERSION = "explora-pago-home-v31-eficiencia-operativa-km";
   const AR_TZ = "America/Argentina/Cordoba";
   const $ = id => document.getElementById(id);
   const state = {
@@ -32,6 +32,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     modalClosure:null,
     modalFile:null,
     previousDetailsOpen:{ caja_chica:false, gastos:false, explora:false, chofer:false },
+    efficiency:{ teamRecords:[], teamClosures:[], loadedAt:0, loading:false, error:"" },
     busy:false,
     refreshing:false
   };
@@ -353,7 +354,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
           <div class="pay-notification-empty">No tenés cierres abiertos.</div>
         </div>
       </section>
-      <button class="pay-floating-spark" id="payQuickClosureBtn" type="button" aria-label="Pedir cierre" hidden><svg viewBox="0 0 24 24"><path d="M12 2 14.8 9.2 22 12l-7.2 2.8L12 22l-2.8-7.2L2 12l7.2-2.8Z"></path></svg></button>
+      <button class="pay-floating-spark pay-efficiency-btn efficiency-missing" id="payEfficiencyBtn" type="button" aria-label="Eficiencia Operativa"><span class="pay-efficiency-icon" aria-hidden="true"></span><span class="pay-efficiency-asterisk" aria-hidden="true">*</span></button>
       <nav class="pay-bottom-nav" id="payBottomNav" aria-label="Navegación principal Explora">
         <button class="pay-nav-btn is-active" data-pay-nav="inicio" type="button"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 10v10h14V10"></path></svg><span>Inicio</span></button>
         <button class="pay-nav-btn" data-pay-nav="actividad" type="button"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"></path></svg><span>Actividad</span></button>
@@ -361,10 +362,17 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
         <button class="pay-nav-btn" id="payNavClosure" type="button"><svg viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7z"></path><path d="M14 3v5h5"></path><path d="M9 14h6M9 17h4"></path></svg><span>Cierre</span></button>
         <button class="pay-nav-btn" data-pay-nav="mas" type="button"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"></path><path d="M18 17h2M19 16v2"></path></svg><span>Más</span></button>
       </nav>
+      <div class="pay-efficiency-backdrop" id="payEfficiencyBackdrop" aria-hidden="true">
+        <section class="pay-efficiency-modal" role="dialog" aria-modal="true" aria-labelledby="payEfficiencyTitle">
+          <header><div><h2 id="payEfficiencyTitle">Eficiencia Operativa</h2><p>Tu rendimiento se compara con el promedio del equipo.</p></div><button class="pay-efficiency-close" id="payEfficiencyClose" type="button" aria-label="Cerrar">×</button></header>
+          <div class="pay-efficiency-body" id="payEfficiencyBody"><div class="pay-efficiency-loading">Calculando eficiencia…</div></div>
+        </section>
+      </div>
       <div class="pay-closure-backdrop" id="payClosureBackdrop" aria-hidden="true">
         <section class="pay-closure-modal" role="dialog" aria-modal="true" aria-labelledby="payClosureTitle">
           <header><div><h2 id="payClosureTitle">Cierre a demanda</h2><p id="payClosureSubtitle">Pedí o confirmá un cierre cuando sea necesario.</p></div><button class="pay-closure-close" id="payClosureClose" type="button" aria-label="Cerrar">×</button></header>
           <div class="pay-closure-field" id="payClosureDriverField" hidden><label for="payClosureDriverSelect">Chofer</label><select id="payClosureDriverSelect"><option value="">Cargando choferes…</option></select></div>
+          <div class="pay-closure-field pay-closure-km-field" id="payClosureKmField" hidden><label for="payClosureKmInput">KM actual del auto</label><input id="payClosureKmInput" type="number" inputmode="numeric" min="0" step="1" placeholder="Ej: 100200" /><small id="payClosureKmHint">Este KM cierra el período de eficiencia y será el inicio del próximo.</small></div>
           <div class="pay-closure-summary" id="payClosureSummary"></div>
           <div class="pay-closure-field" id="payClosureFileField" hidden><label for="payClosureReceiptInput">Comprobante de transferencia</label><input id="payClosureReceiptInput" type="file" accept="image/*,application/pdf" /></div>
           <div class="pay-closure-message" id="payClosureMessage"></div>
@@ -452,11 +460,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       if (!closureButtonState(state.tab, state.latestSummary || computeSummary()).enabled) return;
       openClosureModal("request", null, state.tab);
     });
-    $("payQuickClosureBtn")?.addEventListener("click", () => {
-      // Botón rápido de cierre: crear nuevo cierre del período abierto actual.
-      if (!isClosureTab(state.tab) || !closureButtonState(state.tab, state.latestSummary || computeSummary()).enabled) return;
-      openClosureModal("request", null, state.tab);
-    });
+    $("payEfficiencyBtn")?.addEventListener("click", openEfficiencyModal);
     $("payNavClosure")?.addEventListener("click", () => {
       // Botón inferior "Cierre" = ver/resolver cierres existentes abiertos o historial.
       // NO crea un cierre nuevo. Para crear uno nuevo, usar el botón "Pedir cierre" dentro de cada módulo.
@@ -492,6 +496,8 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     $("payClosureClose")?.addEventListener("click", closeClosureModal);
     $("payClosureCancel")?.addEventListener("click", closeClosureModal);
     $("payClosureBackdrop")?.addEventListener("click", event => { if (event.target?.id === "payClosureBackdrop") closeClosureModal(); });
+    $("payEfficiencyClose")?.addEventListener("click", closeEfficiencyModal);
+    $("payEfficiencyBackdrop")?.addEventListener("click", event => { if (event.target?.id === "payEfficiencyBackdrop") closeEfficiencyModal(); });
     $("payClosureReceiptInput")?.addEventListener("change", event => { state.modalFile = event.target?.files?.[0] || null; renderClosureModal(); });
     $("payClosureSubmit")?.addEventListener("click", submitClosureModal);
     document.querySelector('[data-pay-nav="inicio"]')?.addEventListener("click", () => showPayView("inicio"));
@@ -666,7 +672,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
   }
 
   async function fetchDrivers() {
-    if (!state.db || !isAdmin()) return [];
+    if (!state.db) return [];
     const collections = ["choferes", "usuarios"];
     const map = new Map();
     for (const name of collections) {
@@ -678,7 +684,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
           const uid = safe(data.uid || data.driverUid || data.choferUid || item.id);
           const driverName = safe(data.nombre || data.nombreCompleto || data.displayName || data.name || data.email || uid);
           if (!uid || /admin/.test(role)) return;
-          map.set(uid, { uid, id:item.id, name:driverName, role });
+          map.set(uid, { uid, id:item.id, name:driverName, role, profile:data });
         });
       } catch (error) { console.warn("EXPLORA_PAY_DRIVERS_READ", name, error?.code || error?.message); }
     }
@@ -921,6 +927,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     const toDriver = number(closure.amountDueToDriver || 0);
     const proof = closureHasProof(closure);
     if (closureIsCompleted(closure)) return "none";
+    if (!isAdmin() && closureNeedsDriverKm(closure)) return "driver_km";
     if (isAdmin()) {
       const targetUid = notificationDriverUid();
       if (!targetUid || !closureBelongsToDriver(closure, targetUid)) return "none";
@@ -978,6 +985,263 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     return { closure, message, title, action, amount };
   }
 
+
+  function parseKmValue(raw) {
+    if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+    const text = safe(raw);
+    if (!text) return 0;
+    const digits = text.replace(/[^0-9]/g, "");
+    const parsed = Number(digits || text.replace(/[^0-9.,-]/g, "").replace(/,/g, "."));
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function kmNumberFrom(row = {}, fields = []) {
+    for (const field of fields) {
+      const raw = row?.[field];
+      if (raw === null || raw === undefined || raw === "") continue;
+      const parsed = parseKmValue(raw);
+      if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+    }
+    return 0;
+  }
+
+  const KM_INITIAL_FIELDS = ["kmInicialPeriodo", "kmInicioPeriodo", "kmInicial", "kmInicio", "odometerStart", "mileageStart", "initialKm", "startKm", "kilometrajeInicial"];
+  const KM_CURRENT_FIELDS = ["kmActual", "kilometrajeActual", "kmDeclarado", "odometer", "odometerKm", "mileageCurrent", "currentKm", "lastKm", "ultimoKm", "kmFinal", "kmFinalPeriodo", "kilometrajeFinal"];
+  const KM_FINAL_FIELDS = ["kmFinalPeriodo", "kmFinal", "kmActual", "kilometrajeActual", "kmDeclarado", "odometer", "odometerKm", "mileageFinal", "finalKm", "currentKm"];
+
+  function validBillingClosuresFor(uid = "", rows = state.closures) {
+    const targetUid = safe(uid);
+    return (rows || [])
+      .filter(row => safe(row.closureMode || row.periodType) === "on_demand")
+      .filter(row => isBillingClosureKind(closureKindOf(row)))
+      .filter(row => !targetUid || closureBelongsToDriver(row, targetUid))
+      .filter(row => !/cancelled|canceled|anulado|rechazado/i.test(safe(row.status || row.estado)))
+      .sort((a,b)=>closureCutMs(b)-closureCutMs(a) || rowMs(b)-rowMs(a));
+  }
+
+  function latestBillingClosureFor(uid = "", rows = state.closures, beforeMs = 0) {
+    return validBillingClosuresFor(uid, rows)
+      .filter(row => !beforeMs || closureCutMs(row) < beforeMs)
+      [0] || null;
+  }
+
+  function kmInitialForOpenPeriod(uid = getDriverUid(), closures = state.closures, profile = state.profile) {
+    const latest = latestBillingClosureFor(uid, closures);
+    const fromClosure = kmNumberFrom(latest || {}, KM_FINAL_FIELDS.concat(["efficiencyNextKmInitial", "kmInicialNuevoPeriodo"]));
+    if (fromClosure > 0) return fromClosure;
+    return kmNumberFrom(profile || {}, KM_INITIAL_FIELDS.concat(KM_CURRENT_FIELDS));
+  }
+
+  function kmInitialForClosure(closure = {}) {
+    const uid = safe(closure.driverUid || closure.choferUid || closure.uid || getDriverUid());
+    const cut = closureCutMs(closure) || Date.now();
+    const previous = latestBillingClosureFor(uid, state.closures, cut);
+    const fromPrevious = kmNumberFrom(previous || {}, KM_FINAL_FIELDS.concat(["efficiencyNextKmInitial", "kmInicialNuevoPeriodo"]));
+    if (fromPrevious > 0) return fromPrevious;
+    const driverProfile = (state.drivers.find(driver => driver.uid === uid)?.profile) || (uid === getOwnDriverUid() ? state.profile : {});
+    return kmNumberFrom(driverProfile || {}, KM_INITIAL_FIELDS.concat(KM_CURRENT_FIELDS));
+  }
+
+  function closureNeedsDriverKm(closure = {}) {
+    if (!closure || closureIsCompleted(closure)) return false;
+    if (!isBillingClosureKind(closureKindOf(closure))) return false;
+    const requestedByRole = safe(closure.requestedByRole || closure.solicitadoPorRol || closure.requestedRole).toLowerCase();
+    const explicitlyPending = closure.kmPendienteChofer === true || closure.eficienciaPendienteDatos === true || /pendiente.*km|km.*pendiente/i.test(safe(closure.statusLabel || closure.estado || closure.status));
+    const hasFinal = kmNumberFrom(closure, KM_FINAL_FIELDS.concat(["kmRecorridos"]));
+    return requestedByRole !== "driver" && (explicitlyPending || !hasFinal);
+  }
+
+  function driverProfileForEfficiency(uid = getDriverUid()) {
+    const targetUid = safe(uid);
+    if (!targetUid || targetUid === getOwnDriverUid()) return state.profile || {};
+    return state.drivers.find(driver => driver.uid === targetUid)?.profile || {};
+  }
+
+  function currentKmForEfficiency(uid = getDriverUid(), records = state.records, profile = driverProfileForEfficiency(uid)) {
+    const fromProfile = kmNumberFrom(profile || {}, KM_CURRENT_FIELDS);
+    if (fromProfile > 0) return fromProfile;
+    const fromRecords = (records || [])
+      .map(row => kmNumberFrom(row, KM_CURRENT_FIELDS))
+      .filter(value => value > 0)
+      .sort((a,b)=>b-a)[0] || 0;
+    return fromRecords;
+  }
+
+  function groupByDriver(rows = []) {
+    const map = new Map();
+    for (const row of rows || []) {
+      const uid = safe(row.driverUid || row.choferUid || row.uid || row.ownerUid);
+      if (!uid) continue;
+      if (!map.has(uid)) map.set(uid, []);
+      map.get(uid).push(row);
+    }
+    return map;
+  }
+
+  function efficiencyStatusFromDelta(deltaPct) {
+    if (!Number.isFinite(deltaPct)) return { label:"Faltan datos para calcular", css:"efficiency-missing", tone:"missing" };
+    if (deltaPct >= 20) return { label:"Muy eficiente", css:"efficiency-good", tone:"good" };
+    if (deltaPct >= 5) return { label:"Eficiente", css:"efficiency-good", tone:"good" };
+    if (deltaPct >= -5) return { label:"Normal", css:"efficiency-mid", tone:"mid" };
+    if (deltaPct >= -20) return { label:"Rendimiento por revisar", css:"efficiency-bad", tone:"bad" };
+    return { label:"Crítico / revisar datos", css:"efficiency-bad", tone:"bad" };
+  }
+
+  function buildEfficiencyForDriver({ uid = getDriverUid(), name = displayName(), records = state.records, closures = state.closures, profile = driverProfileForEfficiency(uid), teamRecords = state.efficiency.teamRecords, teamClosures = state.efficiency.teamClosures } = {}) {
+    const targetUid = safe(uid);
+    const driverClosures = (closures || []).filter(row => !targetUid || closureBelongsToDriver(row, targetUid));
+    const resetMs = lastBillingClosureMs(driverClosures);
+    const openRecords = (records || [])
+      .filter(row => !targetUid || closureBelongsToDriver(row, targetUid))
+      .filter(row => rowMs(row) > resetMs)
+      .filter(row => amountOf(row) > 0);
+    const facturacion = openRecords.reduce((sum, row) => sum + amountOf(row), 0);
+    const servicios = openRecords.length;
+    const kmInicial = kmInitialForOpenPeriod(targetUid, driverClosures, profile);
+    const kmActual = currentKmForEfficiency(targetUid, openRecords, profile);
+    const kmRecorridos = kmActual > 0 && kmInicial > 0 ? kmActual - kmInicial : 0;
+    const propiaValida = facturacion > 0 && kmInicial > 0 && kmActual > 0 && kmRecorridos > 0;
+    const eficiencia = propiaValida ? facturacion / kmRecorridos : 0;
+
+    const teamRecordsByDriver = groupByDriver(teamRecords || []);
+    const teamClosuresByDriver = groupByDriver(teamClosures || []);
+    const driverProfiles = new Map((state.drivers || []).map(driver => [driver.uid, driver.profile || {}]));
+    if (targetUid && !driverProfiles.has(targetUid)) driverProfiles.set(targetUid, profile || {});
+    const comparableUids = new Set([...teamRecordsByDriver.keys(), ...driverProfiles.keys()]);
+    let teamBilling = 0, teamKm = 0, comparableCount = 0;
+    for (const driverUid of comparableUids) {
+      const dRecords = teamRecordsByDriver.get(driverUid) || (driverUid === targetUid ? records : []);
+      const dClosures = teamClosuresByDriver.get(driverUid) || (driverUid === targetUid ? driverClosures : []);
+      const dProfile = driverProfiles.get(driverUid) || {};
+      const dReset = lastBillingClosureMs(dClosures);
+      const dOpenRecords = (dRecords || []).filter(row => rowMs(row) > dReset && amountOf(row) > 0);
+      const dBilling = dOpenRecords.reduce((sum, row) => sum + amountOf(row), 0);
+      const dStart = kmInitialForOpenPeriod(driverUid, dClosures, dProfile);
+      const dCurrent = currentKmForEfficiency(driverUid, dOpenRecords, dProfile);
+      const dKm = dCurrent > 0 && dStart > 0 ? dCurrent - dStart : 0;
+      if (dBilling > 0 && dKm > 0) {
+        teamBilling += dBilling;
+        teamKm += dKm;
+        comparableCount += 1;
+      }
+    }
+    const promedioEquipo = teamBilling > 0 && teamKm > 0 && comparableCount >= 2 ? teamBilling / teamKm : 0;
+    const diferenciaPct = propiaValida && promedioEquipo > 0 ? ((eficiencia - promedioEquipo) / promedioEquipo) * 100 : NaN;
+    const missingReasons = [];
+    if (!(kmInicial > 0)) missingReasons.push("falta KM inicial");
+    if (!(kmActual > 0)) missingReasons.push("falta KM actual/final");
+    if (kmInicial > 0 && kmActual > 0 && !(kmRecorridos > 0)) missingReasons.push("KM declarado inválido");
+    if (!(facturacion > 0)) missingReasons.push("no hay facturación cargada");
+    if (!(comparableCount >= 2)) missingReasons.push("no hay suficientes choferes comparables");
+    const status = missingReasons.length ? { label:"Faltan datos para calcular", css:"efficiency-missing", tone:"missing" } : efficiencyStatusFromDelta(diferenciaPct);
+    return { uid:targetUid, name, resetMs, facturacion, servicios, kmInicial, kmActual, kmRecorridos, eficiencia, promedioEquipo, diferenciaPct, comparableCount, missingReasons, status };
+  }
+
+  function currentEfficiencySnapshot() {
+    if (isAdmin() && !getDriverUid()) {
+      return { status:{ label:"Faltan datos para calcular", css:"efficiency-missing", tone:"missing" }, missingReasons:["seleccioná un chofer"], facturacion:0, servicios:0, kmInicial:0, kmActual:0, kmRecorridos:0, eficiencia:0, promedioEquipo:0, diferenciaPct:NaN, comparableCount:0, name:"" };
+    }
+    return buildEfficiencyForDriver({ uid:getDriverUid(), name:displayName() });
+  }
+
+  async function refreshEfficiencyTeamData(force = false) {
+    if (!state.db || state.efficiency.loading) return;
+    const now = Date.now();
+    if (!force && state.efficiency.loadedAt && now - state.efficiency.loadedAt < 90000) return;
+    state.efficiency.loading = true;
+    state.efficiency.error = "";
+    try {
+      await fetchDrivers();
+      const [recordsSnap, closuresSnap] = await Promise.all([
+        getDocs(query(collection(state.db, "billing_records"), limit(800))),
+        getDocs(query(collection(state.db, "cierres_semanales"), limit(800)))
+      ]);
+      state.efficiency.teamRecords = recordsSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+      state.efficiency.teamClosures = closuresSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+      state.efficiency.loadedAt = Date.now();
+    } catch (error) {
+      state.efficiency.error = safe(error?.code || error?.message || "No se pudo leer el promedio del equipo.");
+      // Fallback seguro: nunca rompe la app ni bloquea Registrar cobro.
+      state.efficiency.teamRecords = state.records.slice();
+      state.efficiency.teamClosures = state.closures.slice();
+      state.efficiency.loadedAt = Date.now();
+    } finally {
+      state.efficiency.loading = false;
+      renderEfficiencyButton();
+      if ($("payEfficiencyBackdrop")?.classList.contains("is-open")) renderEfficiencyModal();
+    }
+  }
+
+  function renderEfficiencyButton() {
+    const button = $("payEfficiencyBtn");
+    if (!button) return;
+    const snapshot = currentEfficiencySnapshot();
+    const css = snapshot.status?.css || "efficiency-missing";
+    button.classList.remove("efficiency-good", "efficiency-mid", "efficiency-bad", "efficiency-missing");
+    button.classList.add(css);
+    button.setAttribute("aria-label", `Eficiencia Operativa: ${snapshot.status?.label || "Faltan datos"}`);
+    button.title = snapshot.status?.label || "Eficiencia Operativa";
+  }
+
+  function signedPercent(value) {
+    if (!Number.isFinite(value)) return "—";
+    const sign = value > 0 ? "+" : "";
+    return `${sign}${value.toFixed(1).replace(".", ",")}%`;
+  }
+
+  function efficiencyMoneyPerKm(value) {
+    return value > 0 ? `${currency(value)} / km` : "—";
+  }
+
+  function renderEfficiencyModal() {
+    const body = $("payEfficiencyBody");
+    if (!body) return;
+    if (isAdmin() && !getDriverUid()) {
+      body.innerHTML = `<div class="pay-efficiency-empty">Seleccioná un chofer para ver su eficiencia operativa.</div>`;
+      return;
+    }
+    const snapshot = currentEfficiencySnapshot();
+    const loading = state.efficiency.loading ? `<div class="pay-efficiency-note">Actualizando promedio del equipo…</div>` : "";
+    const warning = snapshot.status?.tone === "bad" ? `<div class="pay-efficiency-warning">Tu eficiencia está por debajo del promedio del equipo. Chequeá si no olvidaste cargar algún cobro o si tus kilómetros están actualizados.</div>` : "";
+    const missing = snapshot.status?.tone === "missing" ? `<div class="pay-efficiency-warning">No hay datos suficientes para calcular eficiencia. Cargá o verificá tus kilómetros declarados.${snapshot.missingReasons?.length ? `<br><small>${esc(snapshot.missingReasons.join(" · "))}</small>` : ""}</div>` : "";
+    const adminDriver = isAdmin() ? `<span class="pay-efficiency-driver">Chofer: ${esc(state.selectedDriverName || snapshot.name || "chofer")}</span>` : "";
+    body.innerHTML = `
+      <div class="pay-efficiency-status ${esc(snapshot.status?.css || "efficiency-missing")}">
+        <span class="pay-efficiency-status-icon"></span>
+        <div>${adminDriver}<small>Estado actual</small><strong>${esc(snapshot.status?.label || "Faltan datos para calcular")}</strong></div>
+      </div>
+      <p class="pay-efficiency-main-text">Tu rendimiento se compara con el promedio del equipo.</p>
+      <div class="pay-efficiency-grid">
+        <article><span>Facturación cargada</span><strong>${currency(snapshot.facturacion || 0)}</strong></article>
+        <article><span>KM inicial del período</span><strong>${snapshot.kmInicial > 0 ? esc(Math.round(snapshot.kmInicial)) : "—"}</strong></article>
+        <article><span>KM declarado actual/final</span><strong>${snapshot.kmActual > 0 ? esc(Math.round(snapshot.kmActual)) : "—"}</strong></article>
+        <article><span>KM recorridos</span><strong>${snapshot.kmRecorridos > 0 ? `${esc(Math.round(snapshot.kmRecorridos))} km` : "—"}</strong></article>
+        <article><span>Servicios cargados</span><strong>${esc(snapshot.servicios || 0)}</strong></article>
+        <article><span>Choferes comparables</span><strong>${esc(snapshot.comparableCount || 0)}</strong></article>
+        <article><span>Tu eficiencia</span><strong>${efficiencyMoneyPerKm(snapshot.eficiencia)}</strong></article>
+        <article><span>Promedio del equipo</span><strong>${efficiencyMoneyPerKm(snapshot.promedioEquipo)}</strong></article>
+        <article class="pay-efficiency-wide"><span>Resultado</span><strong>${signedPercent(snapshot.diferenciaPct)} sobre/debajo del promedio</strong></article>
+      </div>
+      <div class="pay-efficiency-disclaimer">Este resultado se calcula con tu facturación cargada y tus kilómetros declarados.</div>
+      ${warning}${missing}${loading}`;
+  }
+
+  async function openEfficiencyModal() {
+    const backdrop = $("payEfficiencyBackdrop");
+    if (!backdrop) return;
+    backdrop.classList.add("is-open");
+    backdrop.setAttribute("aria-hidden", "false");
+    renderEfficiencyModal();
+    refreshEfficiencyTeamData(true).catch(()=>{});
+  }
+
+  function closeEfficiencyModal() {
+    const backdrop = $("payEfficiencyBackdrop");
+    if (!backdrop) return;
+    backdrop.classList.remove("is-open");
+    backdrop.setAttribute("aria-hidden", "true");
+  }
+
   function renderBellBadge() {
     const badge = $("payBellBadge");
     if (!badge) return;
@@ -1015,17 +1279,20 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       if (action === "admin_waiting_driver") title = `Esperando comprobante de ${driver}`;
       if (action === "driver_review") title = "Explora envió comprobante";
       if (action === "driver_waiting_admin") title = "Esperando comprobante de Explora";
+      if (action === "driver_km") title = "Cargar KM actual";
       const subtitle = `${closureTitle(kind)} · ${closureResultText(row)}`;
-      const status = action === "driver_upload" || action === "admin_upload"
-        ? "Cargar comprobante"
-        : action === "admin_review"
+      const status = action === "driver_km"
+        ? "Cargar KM"
+        : action === "driver_upload" || action === "admin_upload"
+          ? "Cargar comprobante"
+          : action === "admin_review"
           ? "Revisar comprobante"
           : action === "driver_review"
             ? "Ver comprobante"
             : action === "admin_waiting_driver" || action === "driver_waiting_admin"
               ? "Esperando comprobante"
               : "Ver detalle";
-      const helper = action === "admin_upload" || action === "driver_upload" ? "Resolvé tu situación" : closureStatusText(row);
+      const helper = action === "driver_km" ? "Declará el KM actual para completar la eficiencia del período." : action === "admin_upload" || action === "driver_upload" ? "Resolvé tu situación" : closureStatusText(row);
       return `<button class="pay-notification-row" data-pay-notification-closure="${esc(row.id)}" type="button">
         <span class="pay-notification-icon">${notificationIcon(kind)}</span>
         <span class="pay-notification-copy"><strong>${esc(title)}</strong><small>${esc(helper)}</small><em>${esc(subtitle)}</em></span>
@@ -1320,6 +1587,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     renderAdminDriverPicker();
     renderMainCard(summary);
     renderClosureStatus(summary);
+    renderEfficiencyButton();
     renderActivities(summary);
     renderBellBadge();
     if (state.view === "mas") {
@@ -1578,7 +1846,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
   }
 
   function renderClosureStatus(summary) {
-    const box = $("payClosureStatus"), text = $("payClosureStatusText"), action = $("payClosureActionBtn"), quick = $("payQuickClosureBtn");
+    const box = $("payClosureStatus"), text = $("payClosureStatusText"), action = $("payClosureActionBtn");
     const kind = activeClosureKind(state.tab);
     const stateForButton = closureButtonState(kind, summary);
     if (action) {
@@ -1588,10 +1856,6 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       action.classList.toggle("is-closure-locked", stateForButton.visible && !stateForButton.enabled);
       const label = stateForButton.visible ? closureLabel(kind) : "";
       action.querySelector("span").innerHTML = `Pedir cierre<br/>${esc(label)}`;
-    }
-    if (quick) {
-      quick.hidden = !stateForButton.visible || !stateForButton.enabled;
-      quick.disabled = !stateForButton.enabled;
     }
     if (!box || !text) return;
     const pending = pendingHomeClosureFor(getDriverUid(), kind);
@@ -1731,13 +1995,15 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 
   function renderClosureModal() {
     renderDriverSelect();
-    const title = $("payClosureTitle"), subtitle = $("payClosureSubtitle"), summary = $("payClosureSummary"), fileField = $("payClosureFileField"), submit = $("payClosureSubmit"), cancel = $("payClosureCancel");
+    const title = $("payClosureTitle"), subtitle = $("payClosureSubtitle"), summary = $("payClosureSummary"), fileField = $("payClosureFileField"), kmField = $("payClosureKmField"), kmInput = $("payClosureKmInput"), kmHint = $("payClosureKmHint"), submit = $("payClosureSubmit"), cancel = $("payClosureCancel");
     const actions = submit?.closest(".pay-closure-actions");
     if (!title || !subtitle || !summary || !fileField || !submit || !cancel) return;
     const closure = state.modalClosure;
     const kind = closureKindOf(closure || {}) || activeClosureKind(state.modalKind || state.tab) || "gastos";
     const latest = tabSummary(state.latestSummary || computeSummary(), kind);
     fileField.hidden = true;
+    if (kmField) kmField.hidden = true;
+    if (kmInput) kmInput.required = false;
     cancel.textContent = "Cancelar";
     cancel.hidden = false;
     submit.hidden = false;
@@ -1751,8 +2017,18 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       const toDriver = number(closure.amountDueToDriver || 0);
       const proof = closureHasProof(closure);
       const completed = closureIsCompleted(closure);
+      const kmNeeded = action === "driver_km";
       const uploadNeeded = (action === "driver_upload" || action === "admin_upload") && !proof && !completed;
       fileField.hidden = !uploadNeeded;
+      if (kmField) kmField.hidden = !kmNeeded;
+      if (kmInput) {
+        kmInput.required = kmNeeded;
+        kmInput.value = kmNeeded ? "" : kmInput.value;
+        const kmMin = kmInitialForClosure(closure);
+        if (kmMin > 0) kmInput.min = String(Math.floor(kmMin));
+        else kmInput.removeAttribute("min");
+        if (kmHint) kmHint.textContent = kmMin > 0 ? `Debe ser mayor o igual al KM inicial ${Math.round(kmMin)}.` : "Este KM cierra el período de eficiencia y será el inicio del próximo.";
+      }
       summary.innerHTML = closureDetailSummary(closure, kind, isAdmin());
       const noSubmitNeeded = (completed || proof) && !["admin_review", "driver_review"].includes(action);
       if (noSubmitNeeded) {
@@ -1762,7 +2038,11 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 
       if (state.modalMode === "confirm") {
         title.textContent = closureRequesterText(closure);
-        if (action === "driver_upload") {
+        if (action === "driver_km") {
+          subtitle.textContent = "Explora pidió el cierre de facturación. Cargá el KM actual del auto para completar la eficiencia del período.";
+          submit.disabled = false;
+          submit.textContent = "Guardar KM actual";
+        } else if (action === "driver_upload") {
           subtitle.textContent = "Resolvé tu situación: transferí a Explora y cargá el comprobante.";
           submit.disabled = false;
           submit.textContent = "Subir comprobante";
@@ -1815,6 +2095,17 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     // El comprobante lo sube quien tiene que pagar DESPUÉS de que se crea el cierre.
     // Regla: el solicitante nunca sube comprobante al pedir —el cierre queda ABIERTO para la otra parte.
     fileField.hidden = true;
+    const requestNeedsKm = !isAdmin() && isBillingClosureKind(kind);
+    if (kmField) kmField.hidden = !requestNeedsKm;
+    if (kmInput) {
+      kmInput.required = requestNeedsKm;
+      if (requestNeedsKm) {
+        const kmMin = kmInitialForOpenPeriod(getDriverUid(), state.closures, state.profile);
+        if (kmMin > 0) kmInput.min = String(Math.floor(kmMin));
+        else kmInput.removeAttribute("min");
+        if (kmHint) kmHint.textContent = kmMin > 0 ? `Debe ser mayor o igual al KM inicial ${Math.round(kmMin)}.` : "Primero se necesita un KM inicial válido para medir eficiencia.";
+      }
+    }
     if (kind === "caja_chica") {
       summary.innerHTML = `<article><span>Efectivo base</span><strong>${currency(latest.gross || 0)}</strong></article><article><span>Caja chica 5%</span><strong>${currency(latest.cashboxTotal || 0)}</strong></article><article><span>En poder del chofer</span><strong>${currency(latest.cashboxInDriver || 0)}</strong></article><article class="closure-payment-result settlement-result-green"><span class="closure-liquidation-label">Chofer debe liquidar a Explora</span><strong>${currency(latest.amountFromDriver || 0)}</strong></article>`;
     } else if (kind === "gastos") {
@@ -1832,7 +2123,8 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     const oldText = submit?.textContent || "Aceptar";
     if (submit) submit.textContent = "Procesando…";
     try {
-      if (state.modalMode === "confirm" && state.modalClosure) await driverConfirmClosure(state.modalClosure);
+      if (state.modalMode === "confirm" && state.modalClosure && closureActionForViewer(state.modalClosure) === "driver_km") await driverSubmitClosureKm(state.modalClosure);
+      else if (state.modalMode === "confirm" && state.modalClosure) await driverConfirmClosure(state.modalClosure);
       else if (state.modalMode === "admin-review" && state.modalClosure && isAdmin()) await adminSubmitClosure(state.modalClosure);
       else await requestClosure();
       setModalMessage("Listo.", "ok");
@@ -1844,6 +2136,60 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       state.busy = false;
       if (submit) submit.textContent = oldText;
     }
+  }
+
+
+  function readClosureKmInput({ initialKm = 0, required = true } = {}) {
+    const raw = safe($("payClosureKmInput")?.value || "");
+    if (!raw) {
+      if (required) throw new Error("Cargá el KM actual del auto.");
+      return 0;
+    }
+    const km = parseKmValue(raw);
+    if (!Number.isFinite(km)) throw new Error("El KM actual debe ser numérico.");
+    if (km <= 0) throw new Error("El KM actual debe ser mayor a cero.");
+    if (initialKm > 0 && km < initialKm) throw new Error(`El KM actual debe ser mayor o igual al KM inicial ${Math.round(initialKm)}.`);
+    return km;
+  }
+
+  function efficiencyPayloadFromKm({ kmActual = 0, kmInicial = 0, summary = state.latestSummary || computeSummary(), pending = false } = {}) {
+    const facturacion = Number(summary.gross || 0);
+    const servicios = Number((summary.billingRecords || summary.records || []).length || 0);
+    const kmRecorridos = kmActual > 0 && kmInicial > 0 ? Math.max(0, kmActual - kmInicial) : 0;
+    const eficienciaPorKm = facturacion > 0 && kmRecorridos > 0 ? facturacion / kmRecorridos : 0;
+    return {
+      kmActual:Number(kmActual || 0),
+      kmInicialPeriodo:Number(kmInicial || 0),
+      kmFinalPeriodo:Number(kmActual || 0),
+      kmRecorridos:Number(kmRecorridos || 0),
+      eficienciaFacturacion:Number(facturacion || 0),
+      eficienciaServicios:Number(servicios || 0),
+      eficienciaPorKm:Number(eficienciaPorKm || 0),
+      eficienciaEstado:pending ? "Faltan datos para calcular" : (eficienciaPorKm > 0 ? "Pendiente de comparación" : "Faltan datos para calcular"),
+      eficienciaPendienteDatos:!!pending,
+      eficienciaUpdatedAt:serverTimestamp(),
+      eficienciaUpdatedAtMs:Date.now(),
+      kmInicialNuevoPeriodo:Number(kmActual || 0)
+    };
+  }
+
+  async function driverSubmitClosureKm(closure = {}) {
+    if (!closure?.id) throw new Error("No se pudo identificar el cierre.");
+    const initialKm = kmInitialForClosure(closure);
+    const kmActual = readClosureKmInput({ initialKm, required:true });
+    const summary = state.latestSummary || computeSummary();
+    await updateDoc(doc(state.db, "cierres_semanales", closure.id), {
+      ...efficiencyPayloadFromKm({ kmActual, kmInicial:initialKm, summary, pending:false }),
+      kmPendienteChofer:false,
+      status:safe(closure.status || "requested"),
+      estado:safe(closure.estado || "solicitado"),
+      statusLabel:"KM actual declarado por chofer",
+      kmDeclaredByUid:state.auth?.currentUser?.uid || "",
+      kmDeclaredByName:displayName(),
+      kmDeclaredAt:serverTimestamp(),
+      kmDeclaredAtMs:Date.now(),
+      updatedAt:serverTimestamp()
+    });
   }
 
   async function requestClosure() {
@@ -1867,6 +2213,14 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     requireClosureAllowed(kind, fullSummary);
     const summary = tabSummary(fullSummary, kind);
     const cutoffAtMs = Date.now();
+    let kmInitial = 0, kmActual = 0;
+    const isBillingRequest = isBillingClosureKind(kind);
+    if (isBillingRequest && !isAdmin()) {
+      kmInitial = kmInitialForOpenPeriod(targetUid, state.closures, state.profile);
+      kmActual = readClosureKmInput({ initialKm:kmInitial, required:true });
+    } else if (isBillingRequest) {
+      kmInitial = kmInitialForOpenPeriod(targetUid, state.closures, driverProfileForEfficiency(targetUid));
+    }
     const recordIds = (summary.records || []).map(row => safe(row.id)).filter(Boolean).slice(0, 200);
     const expenseIds = (summary.expenses || []).map(row => safe(row.id)).filter(Boolean).slice(0, 200);
     const payload = {
@@ -1891,6 +2245,8 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       requestedByUid:user.uid,
       requestedByName:isAdmin() ? accountName() : displayName(),
       requestedByRole:isAdmin() ? "admin" : "driver",
+      ...(isBillingRequest ? efficiencyPayloadFromKm({ kmActual, kmInicial:kmInitial, summary, pending:isAdmin() }) : {}),
+      ...(isBillingRequest && isAdmin() ? { kmPendienteChofer:true, kmTaskStatus:"pending_driver_km" } : {}),
       gross:Number(summary.gross || 0),
       expenseTotal:Number(summary.expenseTotal || 0),
       cashInDriver:Number(summary.cashInDriver || 0),
@@ -2059,6 +2415,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     state.previousDetailsOpen = { caja_chica:false, gastos:false, explora:false, chofer:false };
     render();
     startRealtime("session");
+    setTimeout(() => refreshEfficiencyTeamData(false).catch(()=>{}), 700);
   }
 
   async function boot() {
@@ -2076,5 +2433,5 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once:true });
   else boot();
-  window.ExploraPagoHome = Object.freeze({ version:VERSION, render, openClosureModal, computeSummary, refreshOpenData });
+  window.ExploraPagoHome = Object.freeze({ version:VERSION, render, openClosureModal, computeSummary, refreshOpenData, openEfficiencyModal });
 })();
