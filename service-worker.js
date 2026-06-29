@@ -1,7 +1,7 @@
-/* Compatibilidad validada: v2518-explora-button-pending-open */
-/* EXPLORA PWA service worker · v2.4.97 */
+/* Compatibilidad validada: v2519-explora-closure-button-soft */
+/* EXPLORA PWA service worker · v2.4.98 */
 const CACHE_PREFIX = 'explora-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v2518-explora-button-pending-open`;
+const CACHE_NAME = `${CACHE_PREFIX}v2519-explora-closure-button-soft`;
 const APP_SHELL = [
   './',
   './index.html',
@@ -96,3 +96,5 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
+
+/* cache bump: cierre habilitado estilo suave */
