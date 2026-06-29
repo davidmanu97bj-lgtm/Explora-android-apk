@@ -1,4 +1,4 @@
-/* EXPLORA · Pago Home v7 · admin selector y períodos pendientes */
+/* EXPLORA · Pago Home v16 · comprobantes finales y caja chica limpia */
 :root{
   --pay-gold:#e9bf45;
   --pay-gold-2:#f4d857;
@@ -51,8 +51,8 @@ body.explora-pay-mode #mainBottomNav.performance-bottom-nav{
 .pay-icons{display:flex;align-items:center;gap:11px;}
 .pay-icon-btn{width:52px;height:52px;border:0;border-radius:18px;background:rgba(255,255,255,.72);display:grid;place-items:center;color:#26283a;padding:0;box-shadow:0 1px 0 rgba(255,255,255,.42) inset;}
 .pay-icon-btn svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:.82;}
-.pay-tabs{position:relative;display:grid;grid-template-columns:repeat(4,1fr);align-items:end;margin:0 0 -1px;min-height:58px;z-index:2;}
-.pay-tab{height:58px;border:0;background:transparent;color:#242638;font-size:19px;font-weight:520;letter-spacing:-.02em;border-radius:22px 22px 0 0;position:relative;z-index:2;padding:0 5px;}
+.pay-tabs{position:relative;display:grid;grid-template-columns:repeat(4,1fr);align-items:end;margin:0 0 -1px;min-height:72px;z-index:2;}
+.pay-tab{height:72px;border:0;background:transparent;color:#242638;font-size:18px;font-weight:520;letter-spacing:-.02em;border-radius:22px 22px 0 0;position:relative;z-index:2;padding:0 5px;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.05;white-space:normal;}
 .pay-tab.is-active{font-weight:850;background:var(--pay-card);box-shadow:0 -1px 0 rgba(255,255,255,.8) inset;}
 .pay-admin-driver-picker{background:rgba(255,255,255,.88);border:1px solid rgba(255,255,255,.65);border-radius:22px;padding:12px 13px;margin:0 0 14px;box-shadow:0 8px 22px rgba(25,28,40,.08);display:grid;gap:8px;}
 .pay-admin-driver-picker[hidden]{display:none!important;}
@@ -127,7 +127,7 @@ body.explora-pay-mode #mainBottomNav.performance-bottom-nav{
 .pay-closure-message{min-height:20px;margin-top:10px;font-size:13px;font-weight:700;color:#596073;}
 .pay-closure-message.is-error{color:#be2e2e}.pay-closure-message.is-ok{color:#25823a}
 @media (max-width:390px){
-  .pay-title{font-size:22px}.pay-icon-btn{width:48px;height:48px}.pay-tab{font-size:17px}.pay-amount{font-size:39px}.pay-main-card{padding:24px 18px 18px}.pay-actions{gap:9px}.pay-action{min-height:102px;font-size:14px;border-radius:22px}.pay-liquid-pill{font-size:16px}.pay-liquid-pill strong{font-size:16px}.pay-bottom-nav{height:84px}.pay-nav-main{width:68px;height:68px}.pay-floating-spark{width:58px;height:58px;bottom:110px;}
+  .pay-title{font-size:22px}.pay-icon-btn{width:48px;height:48px}.pay-tab{font-size:16px}.pay-amount{font-size:39px}.pay-main-card{padding:24px 18px 18px}.pay-actions{gap:9px}.pay-action{min-height:102px;font-size:14px;border-radius:22px}.pay-liquid-pill{font-size:16px}.pay-liquid-pill strong{font-size:16px}.pay-bottom-nav{height:84px}.pay-nav-main{width:68px;height:68px}.pay-floating-spark{width:58px;height:58px;bottom:110px;}
 }
 
 /* EXPLORA · Más blanco integrado al home */
@@ -411,6 +411,13 @@ body.explora-pay-mode.pay-notifications-open .dashboard-shell-real{padding-botto
 
 /* v2511: se quita el ojo de montos en todos los menús */
 .pay-eye{display:none!important;}
+
+
+.pay-activity.is-paid-by-explora{background:#f2f6ff;border-color:#cfdcff;}
+.pay-activity.is-paid-by-explora .pay-activity-icon{background:#e4ecff;color:#3448b8;}
+.pay-activity.is-paid-by-driver{background:#fff8e8;border-color:#ead59b;}
+.pay-activity.is-paid-by-driver .pay-activity-icon{background:#fff0bd;color:#7b5a08;}
+.pay-activity.is-balanced-closure{background:#f7f8fc;border-color:#dde2ef;}
 
 .pay-activity.is-clickable{cursor:pointer;}
 .pay-activity.is-clickable:active{transform:scale(.995);}
