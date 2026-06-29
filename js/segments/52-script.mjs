@@ -5,7 +5,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 (() => {
   "use strict";
 
-  const VERSION = "explora-pago-home-v4-more-white-exit";
+  const VERSION = "explora-pago-home-v5-more-visible-fix";
   const AR_TZ = "America/Argentina/Cordoba";
   const $ = id => document.getElementById(id);
   const state = {
@@ -329,11 +329,23 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     state.view = target;
     const dashboard = $("exploraPagoDashboard");
     const more = $("payMoreScreen");
-    if (more) more.hidden = target !== "mas";
-    if (dashboard) dashboard.hidden = target === "mas";
-    document.body.classList.toggle("pay-more-open", target === "mas");
+    const isMore = target === "mas";
+    if (dashboard) {
+      dashboard.hidden = isMore;
+      dashboard.style.display = isMore ? "none" : "";
+      dashboard.setAttribute("aria-hidden", isMore ? "true" : "false");
+    }
+    if (more) {
+      more.hidden = !isMore;
+      more.style.display = isMore ? "block" : "none";
+      more.setAttribute("aria-hidden", isMore ? "false" : "true");
+    }
+    document.body.classList.toggle("pay-more-open", isMore);
     setBottomNavActive(target);
-    if (target === "mas") renderMoreScreen();
+    if (isMore) {
+      renderMoreScreen();
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
   }
 
   function moreItems() {
