@@ -1,7 +1,7 @@
-/* Compatibilidad validada: v2512-caja-chica-solo-efectivo */
+/* Compatibilidad validada: v2513-cierre-facturacion-resetea-ambos */
 /* EXPLORA PWA service worker · v2.4.95 */
 const CACHE_PREFIX = 'explora-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v2512-caja-chica-solo-efectivo`;
+const CACHE_NAME = `${CACHE_PREFIX}v2513-cierre-facturacion-resetea-ambos`;
 const APP_SHELL = [
   './',
   './index.html',
