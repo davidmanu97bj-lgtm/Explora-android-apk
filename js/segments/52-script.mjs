@@ -311,10 +311,19 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       openClosureModal("request", null, state.tab);
     });
     $("payNavClosure")?.addEventListener("click", () => {
-      // "Cierre" del menú inferior también debe iniciar un cierre nuevo, no reabrir uno viejo.
-      const kind = isClosureTab(state.tab) ? state.tab : "gastos";
-      if (!closureButtonState(kind, state.latestSummary || computeSummary()).enabled) return;
-      openClosureModal("request", null, kind);
+      // Botón inferior "Cierre" = ver/resolver cierres existentes abiertos o historial.
+      // NO crea un cierre nuevo. Para crear uno nuevo, usar el botón "Pedir cierre" dentro de cada módulo.
+      const pending = pendingClosureRows(getDriverUid());
+      if (pending.length === 1) {
+        // Un solo cierre abierto: abrir directo su detalle
+        showPayView("inicio");
+        const row = pending[0];
+        const kind = closureKindOf(row) || state.tab;
+        openClosureModal(isAdmin() ? "admin-review" : "confirm", row, kind);
+      } else {
+        // Sin pendientes o varios: ir a la pantalla de notificaciones/lista de cierres
+        showPayView("notificaciones");
+      }
     });
     $("payClosureStatusBtn")?.addEventListener("click", () => {
       const pending = pendingClosureFor(getDriverUid(), state.tab);
@@ -750,6 +759,10 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     badge.textContent = count > 9 ? "9+" : String(count);
     const bell = $("payBellBtn");
     if (bell) bell.setAttribute("aria-label", count ? `Notificaciones de cierres: ${count} pendiente${count === 1 ? "" : "s"}` : "Notificaciones de cierres");
+    // CAMBIO 2: Botón inferior "Cierre" en rojo cuando haya cierres abiertos/sin resolver.
+    // Usa pendingClosureRows porque ya filtra por estados no finales y por acción != "none".
+    const navClosure = $("payNavClosure");
+    if (navClosure) navClosure.classList.toggle("is-pending-closure", count > 0);
   }
 
   function renderNotificationsScreen() {
@@ -1187,10 +1200,18 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     const pending = stateForButton.visible ? pendingClosureFor(getDriverUid(), kind) : null;
     state.pendingClosure = pending;
     const pendingAction = pending ? closureActionForViewer(pending) : "none";
+    // Mostrar tarjeta amarilla SOLO cuando el usuario actual tiene acción concreta pendiente:
+    // - driver_upload: el chofer debe subir comprobante (chofer paga, no hay comprobante aún)
+    // - admin_upload: admin debe subir comprobante (Explora paga, no hay comprobante aún)
+    // - admin_review: admin debe revisar/confirmar el comprobante que subió el chofer
+    // NO mostrar si:
+    // - driver_waiting_admin: el chofer solo espera que admin actúe (no hay acción para el chofer)
+    // - driver_review: no hay acción urgente para el chofer (solo confirmar recibido, ya está pago)
+    // - view / none: sin acción relevante
+    // - cierre completado o con comprobante ya cargado sin confirmación pendiente del usuario actual
     const showPendingCard = !!pending
-      && !closureHasProof(pending)
       && !closureIsCompleted(pending)
-      && ["driver_upload", "admin_upload"].includes(pendingAction);
+      && ["driver_upload", "admin_upload", "admin_review"].includes(pendingAction);
     box.hidden = !showPendingCard;
     if (showPendingCard) {
       const labelEl = box.querySelector("b");
@@ -1391,6 +1412,10 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       : "El corte será inmediato: lo nuevo que cargues después empieza desde cero en este mismo tipo de cierre.";
     submit.textContent = `Pedir ${closureTitle(kind).toLowerCase()}`;
     submit.disabled = isAdmin() && !getDriverUid();
+    // CAMBIO 3: En modo request el campo de archivo está SIEMPRE oculto.
+    // El comprobante lo sube quien tiene que pagar DESPUÉS de que se crea el cierre.
+    // Regla: el solicitante nunca sube comprobante al pedir —el cierre queda ABIERTO para la otra parte.
+    fileField.hidden = true;
     if (kind === "caja_chica") {
       summary.innerHTML = `<article><span>Efectivo base</span><strong>${currency(latest.gross || 0)}</strong></article><article><span>Caja chica 5%</span><strong>${currency(latest.cashboxTotal || 0)}</strong></article><article><span>En poder del chofer</span><strong>${currency(latest.cashboxInDriver || 0)}</strong></article><article><span>Chofer pasa a Explora</span><strong>${currency(latest.amountFromDriver || 0)}</strong></article>`;
     } else if (kind === "gastos") {
