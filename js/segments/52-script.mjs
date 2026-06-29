@@ -5,7 +5,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 (() => {
   "use strict";
 
-  const VERSION = "explora-pago-home-v6-closure-notifications";
+  const VERSION = "explora-pago-home-v7-admin-driver-pending-periods";
   const AR_TZ = "America/Argentina/Cordoba";
   const $ = id => document.getElementById(id);
   const state = {
@@ -14,6 +14,8 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     user:null,
     role:"driver",
     profile:{},
+    selectedDriverUid:"",
+    selectedDriverName:"",
     db:null,
     auth:null,
     storage:null,
@@ -132,12 +134,27 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     return new Intl.DateTimeFormat("es-AR", { timeZone:AR_TZ, day:"2-digit", month:"2-digit" }).format(d);
   }
 
+  function accountName() {
+    return safe(state.profile?.nombre || state.profile?.nombreCompleto || state.profile?.displayName || state.user?.displayName || state.user?.email?.split("@")[0] || (isAdmin() ? "DAVID" : "CHOFER")).toUpperCase();
+  }
+
   function displayName() {
-    return safe(state.profile?.nombre || state.profile?.nombreCompleto || state.profile?.displayName || state.user?.displayName || state.user?.email?.split("@")[0] || "CHOFER").toUpperCase();
+    if (isAdmin()) {
+      return safe(state.selectedDriverName || "SELECCIONAR CHOFER").toUpperCase();
+    }
+    return accountName();
+  }
+
+  function getOwnDriverUid() {
+    return safe(state.profile?.uid || state.profile?.driverUid || state.profile?.choferUid || state.profileDocumentId || state.user?.uid);
   }
 
   function getDriverUid() {
-    return safe(state.profile?.uid || state.profile?.driverUid || state.profile?.choferUid || state.profileDocumentId || state.user?.uid);
+    return isAdmin() ? safe(state.selectedDriverUid) : getOwnDriverUid();
+  }
+
+  function hasAdminDriverSelected() {
+    return !isAdmin() || !!getDriverUid();
   }
 
   function clearListeners() {
@@ -181,6 +198,11 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
           <button class="pay-tab" data-pay-tab="explora" type="button" role="tab" aria-selected="false">Explora</button>
           <button class="pay-tab" data-pay-tab="chofer" type="button" role="tab" aria-selected="false">Chofer</button>
         </nav>
+        <section class="pay-admin-driver-picker" id="payAdminDriverPicker" hidden>
+          <label for="payAdminDriverSelect">Seleccionar chofer</label>
+          <select id="payAdminDriverSelect"><option value="">Cargando choferes…</option></select>
+          <small id="payAdminDriverHint">Elegí un chofer para ver sus valores y pedir cierres.</small>
+        </section>
         <section class="pay-main-card" aria-live="polite">
           <div class="pay-main-row">
             <div class="pay-amount-wrap">
@@ -297,6 +319,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     $("payBellBtn")?.addEventListener("click", () => showPayView("notificaciones"));
     $("payCardEnterBtn")?.addEventListener("click", () => { if (state.tab === "gastos") runExistingAction("cargar-gastos"); else if (state.tab === "chofer" || state.tab === "explora") openClosureModal(state.pendingClosure && !isAdmin() ? "confirm" : "request", state.pendingClosure, state.tab); else runExistingAction("nuevo-servicio"); });
     $("payRefreshBtn")?.addEventListener("click", () => startRealtime("manual-refresh"));
+    $("payAdminDriverSelect")?.addEventListener("change", event => selectAdminDriver(event.target?.value || ""));
     $("payClosureClose")?.addEventListener("click", closeClosureModal);
     $("payClosureCancel")?.addEventListener("click", closeClosureModal);
     $("payClosureBackdrop")?.addEventListener("click", event => { if (event.target?.id === "payClosureBackdrop") closeClosureModal(); });
@@ -403,7 +426,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
   }
 
   function renderMoreScreen() {
-    const name = displayName();
+    const name = isAdmin() ? accountName() : displayName();
     const roleLabel = isAdmin() ? "Administrador" : "Chofer";
     const subtitle = $("payMoreSubtitle");
     const moreName = $("payMoreName");
@@ -430,6 +453,33 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
         </button>
       `).join("");
     }
+  }
+
+  function renderAdminDriverPicker() {
+    const picker = $("payAdminDriverPicker");
+    const select = $("payAdminDriverSelect");
+    const hint = $("payAdminDriverHint");
+    if (!picker || !select) return;
+    picker.hidden = !isAdmin();
+    if (!isAdmin()) return;
+    const current = safe(state.selectedDriverUid);
+    const options = [`<option value="">Seleccionar chofer…</option>`].concat(state.drivers.map(driver => `<option value="${esc(driver.uid)}">${esc(driver.name)}</option>`));
+    select.innerHTML = options.join("");
+    select.value = current;
+    if (hint) hint.textContent = current ? `Viendo datos abiertos de ${state.selectedDriverName || "chofer seleccionado"}.` : "Hasta seleccionar un chofer, todos los valores se muestran en $0.";
+  }
+
+  function selectAdminDriver(uid = "") {
+    const nextUid = safe(uid);
+    const driver = state.drivers.find(item => item.uid === nextUid);
+    state.selectedDriverUid = nextUid;
+    state.selectedDriverName = driver?.name || "";
+    state.records = [];
+    state.expenses = [];
+    state.closures = [];
+    state.pendingClosure = null;
+    render();
+    startRealtime("admin-driver-selected");
   }
 
   function logoutFromMore() {
@@ -497,15 +547,32 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
   function startRealtime(reason = "start") {
     if (!state.db || !state.user) return;
     clearListeners();
-    const uid = isAdmin() ? "" : getDriverUid();
+    const uid = getDriverUid();
+    if (isAdmin()) {
+      fetchDrivers().then(() => {
+        if (state.selectedDriverUid && !state.drivers.some(driver => driver.uid === state.selectedDriverUid)) {
+          state.selectedDriverUid = "";
+          state.selectedDriverName = "";
+        }
+        render();
+      }).catch(()=>{});
+      if (!uid) {
+        state.records = [];
+        state.expenses = [];
+        state.closures = [];
+        state.pendingClosure = null;
+        render();
+        console.info("EXPLORA_PAY_REALTIME", VERSION, reason, "admin-waiting-driver");
+        return;
+      }
+    }
     const unsubs = [
       listenCollection("billing_records", "records", uid),
       listenCollection("gastos", "expenses", uid),
       listenCollection("cierres_semanales", "closures", uid)
     ].filter(Boolean);
     state.unsubscribers.push(...unsubs);
-    if (isAdmin()) fetchDrivers().then(render).catch(()=>{});
-    console.info("EXPLORA_PAY_REALTIME", VERSION, reason);
+    console.info("EXPLORA_PAY_REALTIME", VERSION, reason, uid || "no-driver");
   }
 
   function lastClosureMs(rows, kind = state.tab) {
@@ -540,7 +607,10 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
         if (isBillingClosureKind(target)) return isBillingClosureKind(rowKind);
         return rowKind === target;
       })
-      .filter(row => !uid || [row.driverUid,row.choferUid,row.uid].map(safe).includes(uid))
+      .filter(row => {
+        if (isAdmin() && !uid) return false;
+        return !uid || [row.driverUid,row.choferUid,row.uid].map(safe).includes(uid);
+      })
       .filter(row => !/confirmed|completed|closed|cerrado|al_dia|al día|pagado|cancelled|canceled|anulado|rechazado/i.test(safe(row.status || row.estado)))
       .sort((a,b)=>rowMs(b)-rowMs(a));
     return pending[0] || null;
@@ -551,8 +621,8 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       .filter(row => safe(row.closureMode || row.periodType) === "on_demand")
       .filter(row => !/confirmed|completed|closed|cerrado|al_dia|al día|pagado|cancelled|canceled|anulado|rechazado/i.test(safe(row.status || row.estado)))
       .filter(row => {
-        if (isAdmin()) return true;
         const rowUids = [row.driverUid, row.choferUid, row.uid, row.ownerUid].map(safe);
+        if (isAdmin()) return !!uid && rowUids.includes(uid);
         return !uid || rowUids.includes(uid);
       })
       .sort((a,b)=>rowMs(b)-rowMs(a));
@@ -773,7 +843,8 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       button.setAttribute("aria-selected", active ? "true" : "false");
     });
     const greeting = $("payGreeting");
-    if (greeting) greeting.textContent = `Hola, ${displayName()}`;
+    if (greeting) greeting.textContent = isAdmin() ? (state.selectedDriverName ? `Chofer, ${displayName()}` : "Seleccionar chofer") : `Hola, ${displayName()}`;
+    renderAdminDriverPicker();
     renderMainCard(summary);
     renderClosureStatus(summary);
     renderActivities(summary);
@@ -788,15 +859,41 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     if ($("payClosureBackdrop")?.classList.contains("is-open")) renderClosureModal();
   }
 
+  function pendingValueForTab(closure = {}, kind = state.tab) {
+    const target = activeClosureKind(kind);
+    if (target === "gastos") return number(closure.expenseTotal || 0);
+    if (target === "chofer") return number(closure.cashInDriver || 0);
+    if (target === "explora") return number(closure.exploraCash || closure.nonCashInExplora || 0);
+    if (isBillingClosureKind(target)) return number(closure.gross || 0);
+    return 0;
+  }
+
+  function pendingResultLine(closure = {}) {
+    const due = number(closure.amountDueFromDriver || 0);
+    const toDriver = number(closure.amountDueToDriver || 0);
+    if (due > 0) return `Chofer debe pagar ${currency(due)}`;
+    if (toDriver > 0) return activeClosureKind(closureKindOf(closure)) === "gastos" ? `Explora reintegra ${currency(toDriver)}` : `Explora paga ${currency(toDriver)}`;
+    return "Sin diferencia";
+  }
+
   function renderMainCard(summary) {
     const amount = $("payMainAmount"), subtitle = $("payMainSubtitle"), pillLabel = $("payPillLabel"), pillAmount = $("payPillAmount"), extra = $("payExtraLines");
     if (!amount || !subtitle || !pillLabel || !pillAmount || !extra) return;
     const lines = [];
+    const pending = isClosureTab(state.tab) ? pendingClosureFor(getDriverUid(), state.tab) : null;
+    if (isAdmin() && !getDriverUid()) {
+      amount.textContent = currency(0);
+      subtitle.innerHTML = "Seleccioná un chofer para cargar sus datos abiertos.";
+      pillLabel.textContent = "Sin chofer seleccionado";
+      pillAmount.textContent = currency(0);
+      extra.innerHTML = `<div><span>Administrador</span><strong>Seleccionar chofer</strong></div>`;
+      return;
+    }
     let main = summary.gross, sub = "Bruto abierto informativo", pill = "Sin cierre en Bruto", pillValue = 0;
     if (state.tab === "gastos") {
       const t = tabSummary(summary, "gastos");
       main = t.expenseTotal;
-      sub = "Solo gastos desde el último cierre de gastos";
+      sub = pending ? "Gastos nuevos desde el cierre pendiente" : "Solo gastos desde el último cierre de gastos";
       pill = t.netSettlementToDriver > 0 ? "Explora reintegra al chofer" : t.netSettlementToDriver < 0 ? "Chofer reconoce a Explora" : "Gastos equilibrados";
       pillValue = abs(t.netSettlementToDriver);
       lines.push(
@@ -808,7 +905,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     } else if (state.tab === "explora") {
       const t = tabSummary(summary, "explora");
       main = summary.nonCashInExplora;
-      sub = "Facturación abierta: se compara digital de Explora contra efectivo del chofer";
+      sub = pending ? "Digital nuevo desde el cierre pendiente" : "Facturación abierta: se compara digital de Explora contra efectivo del chofer";
       pill = t.amountToDriver > 0 ? "Explora paga al chofer" : t.amountFromDriver > 0 ? "Chofer paga a Explora" : "Facturación equilibrada";
       pillValue = Math.max(t.amountToDriver, t.amountFromDriver);
       lines.push(
@@ -820,7 +917,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     } else if (state.tab === "chofer") {
       const t = tabSummary(summary, "chofer");
       main = summary.cashInDriver;
-      sub = "Facturación abierta: se compara efectivo del chofer contra digital de Explora";
+      sub = pending ? "Efectivo nuevo desde el cierre pendiente" : "Facturación abierta: se compara efectivo del chofer contra digital de Explora";
       pill = t.amountToDriver > 0 ? "Explora paga al chofer" : t.amountFromDriver > 0 ? "Chofer paga a Explora" : "Facturación equilibrada";
       pillValue = Math.max(t.amountToDriver, t.amountFromDriver);
       lines.push(
@@ -840,8 +937,16 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
         ["Gastos abiertos", currency(summary.expenseTotal)]
       );
     }
+    if (pending) {
+      lines.unshift(
+        ["Anterior pendiente de cierre", currency(pendingValueForTab(pending, state.tab))],
+        ["Resultado pendiente", pendingResultLine(pending)]
+      );
+    }
     amount.textContent = currency(main);
-    subtitle.innerHTML = `${esc(sub)} <b>${tabSummary(summary, state.tab).resetMs ? "desde último cierre" : "sin cierre previo"}</b>`;
+    subtitle.innerHTML = pending
+      ? `${esc(sub)} <b>pendiente de cierre</b>`
+      : `${esc(sub)} <b>${tabSummary(summary, state.tab).resetMs ? "desde último cierre" : "sin cierre previo"}</b>`;
     pillLabel.textContent = pill;
     pillAmount.textContent = currency(pillValue);
     extra.innerHTML = lines.map(([label,value]) => `<div><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`).join("");
@@ -850,7 +955,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
   function renderClosureStatus(summary) {
     const box = $("payClosureStatus"), text = $("payClosureStatusText"), action = $("payClosureActionBtn"), quick = $("payQuickClosureBtn");
     const kind = activeClosureKind(state.tab);
-    const canClose = isClosureTab(kind);
+    const canClose = isClosureTab(kind) && hasAdminDriverSelected();
     if (action) {
       action.hidden = !canClose;
       action.disabled = !canClose;
@@ -937,6 +1042,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     if (field.hidden) return;
     const options = [`<option value="">Elegir chofer…</option>`].concat(state.drivers.map(driver => `<option value="${esc(driver.uid)}">${esc(driver.name)}</option>`));
     select.innerHTML = options.join("");
+    select.value = safe(state.selectedDriverUid);
   }
 
   function closureDetailSummary(closure = {}, kind = "gastos", adminView = false) {
@@ -978,6 +1084,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     fileField.hidden = true;
     cancel.textContent = "Cancelar";
     submit.className = "pay-closure-primary";
+    submit.disabled = false;
     if (state.modalMode === "confirm" && closure) {
       const due = number(closure.amountDueFromDriver || 0), toDriver = number(closure.amountDueToDriver || 0);
       title.textContent = "Explora pidió el cierre";
@@ -997,9 +1104,10 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     }
     title.textContent = isAdmin() ? `Pedir ${closureTitle(kind).toLowerCase()} a un chofer` : `Pedir ${closureTitle(kind).toLowerCase()}`;
     subtitle.textContent = isAdmin()
-      ? "Elegí el chofer. El corte será inmediato y solo afectará este tipo de cierre."
+      ? (getDriverUid() ? `Chofer seleccionado: ${state.selectedDriverName || "chofer"}. El corte será inmediato.` : "Seleccioná primero un chofer para cargar sus datos y pedir el cierre.")
       : "El corte será inmediato: lo nuevo que cargues después empieza desde cero en este mismo tipo de cierre.";
     submit.textContent = `Pedir ${closureTitle(kind).toLowerCase()}`;
+    submit.disabled = isAdmin() && !getDriverUid();
     if (kind === "gastos") {
       summary.innerHTML = `<article><span>Gastos abiertos</span><strong>${currency(latest.expenseTotal)}</strong></article><article><span>Parte chofer 50%</span><strong>${currency(latest.driverExpenseShare || 0)}</strong></article><article><span>Explora reintegra al chofer</span><strong>${currency(latest.amountToDriver)}</strong></article>`;
     } else {
@@ -1039,9 +1147,11 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     let targetUid = getDriverUid();
     let targetName = displayName();
     if (isAdmin()) {
-      targetUid = safe($("payClosureDriverSelect")?.value);
+      targetUid = safe($("payClosureDriverSelect")?.value || state.selectedDriverUid);
       const driver = state.drivers.find(d => d.uid === targetUid);
       if (!targetUid || !driver) throw new Error("Elegí un chofer para pedir el cierre.");
+      state.selectedDriverUid = targetUid;
+      state.selectedDriverName = driver.name;
       targetName = driver.name;
     }
     const pending = pendingClosureFor(targetUid, kind);
@@ -1066,7 +1176,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       uid:targetUid,
       driverName:targetName,
       requestedByUid:user.uid,
-      requestedByName:displayName(),
+      requestedByName:isAdmin() ? accountName() : displayName(),
       requestedByRole:isAdmin() ? "admin" : "driver",
       gross:Number(summary.gross || 0),
       expenseTotal:Number(summary.expenseTotal || 0),
@@ -1142,7 +1252,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       estado:"confirmado",
       statusLabel:"Cierre confirmado por Explora",
       confirmedByUid:state.auth?.currentUser?.uid || "",
-      confirmedByName:displayName(),
+      confirmedByName:accountName(),
       confirmedAt:serverTimestamp(),
       confirmedAtMs:Date.now(),
       updatedAt:serverTimestamp()
@@ -1155,6 +1265,10 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     state.role = safe(session.role || session.profile?.role || session.profile?.rol || "driver").toLowerCase() || "driver";
     state.profile = session.profile || {};
     state.profileDocumentId = session.profileDocumentId || session.driverId || state.user?.uid || "";
+    if (!isAdmin()) {
+      state.selectedDriverUid = "";
+      state.selectedDriverName = "";
+    }
     render();
     startRealtime("session");
   }
