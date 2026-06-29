@@ -5,7 +5,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 (() => {
   "use strict";
 
-  const VERSION = "explora-pago-home-v18-closure-activity-open-closed";
+  const VERSION = "explora-pago-home-v19-admin-driver-notifications-filtered";
   const AR_TZ = "America/Argentina/Cordoba";
   const $ = id => document.getElementById(id);
   const state = {
@@ -152,6 +152,41 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 
   function getDriverUid() {
     return isAdmin() ? safe(state.selectedDriverUid) : getOwnDriverUid();
+  }
+
+  function notificationDriverUid() {
+    if (isAdmin()) return safe(state.selectedDriverUid || "");
+    return getOwnDriverUid();
+  }
+
+  function closureDriverUids(row = {}) {
+    return [row.driverUid, row.choferUid, row.uid, row.ownerUid]
+      .map(safe)
+      .filter(Boolean);
+  }
+
+  function closureBelongsToDriver(row = {}, uid = "") {
+    const targetUid = safe(uid);
+    if (!targetUid) return false;
+    return closureDriverUids(row).includes(targetUid);
+  }
+
+  function closureDriverName(row = {}) {
+    return safe(
+      row.driverName ||
+      row.choferNombre ||
+      row.nombreChofer ||
+      row.selectedDriverName ||
+      state.selectedDriverName ||
+      "Chofer"
+    );
+  }
+
+  function closureRequesterText(row = {}) {
+    const requestedByRole = safe(row.requestedByRole || row.solicitadoPorRol || row.requestedRole).toLowerCase();
+    if (requestedByRole === "driver" || requestedByRole === "chofer") return `${closureDriverName(row)} pidió el cierre`;
+    if (requestedByRole === "admin" || requestedByRole === "explora") return "Explora pidió el cierre";
+    return "Cierre solicitado";
   }
 
   function hasAdminDriverSelected() {
@@ -313,7 +348,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     $("payNavClosure")?.addEventListener("click", () => {
       // Botón inferior "Cierre" = ver/resolver cierres existentes abiertos o historial.
       // NO crea un cierre nuevo. Para crear uno nuevo, usar el botón "Pedir cierre" dentro de cada módulo.
-      const pending = pendingClosureRows(getDriverUid());
+      const pending = pendingClosureRows(notificationDriverUid());
       if (pending.length === 1) {
         // Un solo cierre abierto: abrir directo su detalle
         showPayView("inicio");
@@ -550,7 +585,6 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       try {
         const snap = await getDocs(query(collection(state.db, collectionName), where(field, "==", uid), limit(250)));
         snap.forEach(docSnap => map.set(docSnap.id, { id:docSnap.id, ...docSnap.data() }));
-        if (map.size) break;
       } catch (_) {}
     }
     return Array.from(map.values());
@@ -558,12 +592,39 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 
   function listenCollection(collectionName, targetArray, uid) {
     try {
-      return onSnapshot(scopedQuery(collectionName, uid), snap => {
-        state[targetArray] = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+      const targetUid = safe(uid || getDriverUid());
+      if (!targetUid) {
+        return onSnapshot(scopedQuery(collectionName, targetUid), snap => {
+          state[targetArray] = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+          render();
+        }, error => {
+          console.warn(`EXPLORA_PAY_LISTENER_${collectionName}`, error?.code || error?.message);
+        });
+      }
+      const fields = ["driverUid", "choferUid", "uid", "ownerUid"];
+      const snapshots = new Map();
+      const publish = () => {
+        const merged = new Map();
+        for (const docs of snapshots.values()) {
+          for (const item of docs) merged.set(item.id, item);
+        }
+        state[targetArray] = Array.from(merged.values()).sort((a,b)=>rowMs(b)-rowMs(a));
         render();
-      }, error => {
-        console.warn(`EXPLORA_PAY_LISTENER_${collectionName}`, error?.code || error?.message);
-      });
+      };
+      const unsubs = fields.map(field => {
+        try {
+          return onSnapshot(query(collection(state.db, collectionName), where(field, "==", targetUid), limit(250)), snap => {
+            snapshots.set(field, snap.docs.map(d => ({ id:d.id, ...d.data() })));
+            publish();
+          }, error => {
+            console.warn(`EXPLORA_PAY_LISTENER_${collectionName}_${field}`, error?.code || error?.message);
+          });
+        } catch (error) {
+          console.warn(`EXPLORA_PAY_LISTENER_SETUP_${collectionName}_${field}`, error?.code || error?.message);
+          return null;
+        }
+      }).filter(Boolean);
+      return () => unsubs.forEach(unsub => { try { unsub?.(); } catch (_) {} });
     } catch (error) {
       console.warn(`EXPLORA_PAY_LISTENER_SETUP_${collectionName}`, error?.code || error?.message);
       return null;
@@ -634,8 +695,10 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
   }
 
   function pendingClosureFor(uid = getDriverUid(), kind = state.tab) {
+    const targetUid = safe(uid);
     const target = activeClosureKind(kind);
     if (!target) return null;
+    if (isAdmin() && !targetUid) return null;
     const pending = state.closures
       .filter(row => safe(row.closureMode || row.periodType) === "on_demand")
       .filter(row => {
@@ -645,19 +708,19 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
         if (isBillingClosureKind(target)) return isBillingClosureKind(rowKind);
         return rowKind === target;
       })
-      .filter(row => {
-        if (isAdmin() && !uid) return false;
-        return !uid || [row.driverUid,row.choferUid,row.uid].map(safe).includes(uid);
-      })
+      .filter(row => !targetUid || closureBelongsToDriver(row, targetUid))
       .filter(row => !/confirmed|completed|closed|cerrado|al_dia|al día|pagado|cancelled|canceled|anulado|rechazado/i.test(safe(row.status || row.estado)))
       .sort((a,b)=>rowMs(b)-rowMs(a));
     return pending[0] || null;
   }
 
-  function pendingClosureRows(uid = getDriverUid()) {
+  function pendingClosureRows(uid = notificationDriverUid()) {
+    const targetUid = safe(uid);
+    if (isAdmin() && !targetUid) return [];
     const rows = state.closures
       .filter(row => safe(row.closureMode || row.periodType) === "on_demand")
       .filter(row => !/confirmed|completed|closed|cerrado|al_dia|al día|pagado|cancelled|canceled|anulado|rechazado/i.test(safe(row.status || row.estado)))
+      .filter(row => closureBelongsToDriver(row, targetUid))
       .filter(row => closureActionForViewer(row) !== "none")
       .sort((a,b)=>rowMs(b)-rowMs(a));
     const unique = new Map();
@@ -731,20 +794,17 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     const due = number(closure.amountDueFromDriver || 0);
     const toDriver = number(closure.amountDueToDriver || 0);
     const proof = closureHasProof(closure);
-    const requestedByRole = safe(closure.requestedByRole || closure.solicitadoPorRol || closure.requestedRole).toLowerCase();
-    const requestedByUid = safe(closure.requestedByUid || closure.solicitadoPorUid || closure.createdByUid);
-    const ownUid = safe(state.user?.uid || getOwnDriverUid());
+    if (closureIsCompleted(closure)) return "none";
     if (isAdmin()) {
-      if (requestedByRole === "admin" || requestedByUid === ownUid) return "none";
+      const targetUid = notificationDriverUid();
+      if (!targetUid || !closureBelongsToDriver(closure, targetUid)) return "none";
       if (toDriver > 0 && !proof) return "admin_upload";
       if (due > 0 && proof) return "admin_review";
+      if (due > 0 && !proof) return "admin_waiting_driver";
       return "view";
     }
     const driverUid = getOwnDriverUid();
-    const rowUids = [closure.driverUid, closure.choferUid, closure.uid, closure.ownerUid].map(safe);
-    if (!rowUids.includes(driverUid)) return "none";
-    if (requestedByRole !== "admin" && requestedByUid !== "admin") return "none";
-    if (requestedByUid && requestedByUid === driverUid) return "none";
+    if (!driverUid || !closureBelongsToDriver(closure, driverUid)) return "none";
     if (due > 0 && !proof) return "driver_upload";
     if (toDriver > 0 && proof) return "driver_review";
     if (toDriver > 0 && !proof) return "driver_waiting_admin";
@@ -754,7 +814,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
   function renderBellBadge() {
     const badge = $("payBellBadge");
     if (!badge) return;
-    const count = pendingClosureRows(getDriverUid()).length;
+    const count = pendingClosureRows(notificationDriverUid()).length;
     badge.hidden = count < 1;
     badge.textContent = count > 9 ? "9+" : String(count);
     const bell = $("payBellBtn");
@@ -768,7 +828,12 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
   function renderNotificationsScreen() {
     const list = $("payNotificationList");
     if (!list) return;
-    const rows = pendingClosureRows(getDriverUid());
+    const targetUid = notificationDriverUid();
+    if (isAdmin() && !targetUid) {
+      list.innerHTML = `<div class="pay-notification-empty">Seleccioná un chofer para ver sus cierres pendientes.</div>`;
+      return;
+    }
+    const rows = pendingClosureRows(targetUid);
     if (!rows.length) {
       list.innerHTML = `<div class="pay-notification-empty">No tenés cierres pendientes.</div>`;
       return;
@@ -776,14 +841,29 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     list.innerHTML = rows.map(row => {
       const kind = closureKindOf(row) || "gastos";
       const action = closureActionForViewer(row);
-      let title = isAdmin() && safe(row.requestedByRole) !== "admin" ? "Chofer pidió el cierre" : "Explora pidió el cierre";
-      if (action === "admin_review") title = "Chofer envió comprobante";
+      const driver = closureDriverName(row);
+      const requestedByRole = safe(row.requestedByRole || row.solicitadoPorRol || row.requestedRole).toLowerCase();
+      let title = isAdmin()
+        ? (requestedByRole === "driver" || requestedByRole === "chofer" ? `${driver} pidió cierre` : `Cierre de ${driver}`)
+        : (requestedByRole === "admin" || requestedByRole === "explora" ? "Explora pidió el cierre" : "Tu cierre pendiente");
+      if (action === "admin_review") title = `${driver} envió comprobante`;
+      if (action === "admin_waiting_driver") title = `Esperando comprobante de ${driver}`;
       if (action === "driver_review") title = "Explora envió comprobante";
+      if (action === "driver_waiting_admin") title = "Esperando comprobante de Explora";
       const subtitle = `${closureTitle(kind)} · ${closureResultText(row)}`;
-      const status = action === "driver_upload" || action === "admin_upload" ? "Cargar comprobante" : action === "admin_review" ? "Revisar comprobante" : action === "driver_review" ? "Ver comprobante" : "Ver detalle";
+      const status = action === "driver_upload" || action === "admin_upload"
+        ? "Cargar comprobante"
+        : action === "admin_review"
+          ? "Revisar comprobante"
+          : action === "driver_review"
+            ? "Ver comprobante"
+            : action === "admin_waiting_driver" || action === "driver_waiting_admin"
+              ? "Esperando comprobante"
+              : "Ver detalle";
+      const helper = action === "admin_upload" || action === "driver_upload" ? "Resolvé tu situación" : closureStatusText(row);
       return `<button class="pay-notification-row" data-pay-notification-closure="${esc(row.id)}" type="button">
         <span class="pay-notification-icon">${notificationIcon(kind)}</span>
-        <span class="pay-notification-copy"><strong>${esc(title)}</strong><small>Resolvé tu situación</small><em>${esc(subtitle)}</em></span>
+        <span class="pay-notification-copy"><strong>${esc(title)}</strong><small>${esc(helper)}</small><em>${esc(subtitle)}</em></span>
         <span class="pay-notification-side"><time>${esc(closureTimeLabel(row))}</time><b>${esc(status)}</b></span>
       </button>`;
     }).join("");
@@ -800,7 +880,12 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
   }
 
   function openClosureFromNotification(id) {
-    const closure = state.closures.find(row => safe(row.id) === safe(id));
+    const targetUid = notificationDriverUid();
+    const closure = state.closures.find(row => {
+      if (safe(row.id) !== safe(id)) return false;
+      if (isAdmin()) return closureBelongsToDriver(row, targetUid);
+      return closureBelongsToDriver(row, getOwnDriverUid());
+    });
     if (!closure) return;
     showPayView("inicio");
     const kind = closureKindOf(closure) || state.tab;
@@ -1312,13 +1397,13 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     const share = number(closure.billingShareEach || 0);
     const status = safe(closure.statusLabel || closure.estado || closure.status || "pendiente");
     const cut = closureTimeLabel(closure);
-    const driver = safe(closure.driverName || closure.choferNombre || closure.nombreChofer || "Chofer");
+    const driver = closureDriverName(closure);
     const kindLabel = closureTitle(kind);
     const k = activeClosureKind(kind);
     const result = due > 0 ? (k === "caja_chica" ? "Chofer pasa caja chica a Explora" : "Chofer paga a Explora") : toDriver > 0 ? (k === "gastos" ? "Explora reintegra al chofer" : "Explora paga al chofer") : "Cierre equilibrado";
     const amount = Math.max(due, toDriver);
     const base = [
-      ["Motivo", "Explora pidió el cierre"],
+      ["Motivo", closureRequesterText(closure)],
       ["Chofer", driver],
       ["Tipo de cierre", kindLabel],
       ["Corte", cut],
@@ -1370,7 +1455,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       }
 
       if (state.modalMode === "confirm") {
-        title.textContent = "Explora pidió el cierre";
+        title.textContent = closureRequesterText(closure);
         if (action === "driver_upload") {
           subtitle.textContent = "Resolvé tu situación: transferí a Explora y cargá el comprobante.";
           submit.disabled = false;
@@ -1379,6 +1464,10 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
           subtitle.textContent = "Explora cargó el comprobante. Revisalo y confirmá recibido.";
           submit.disabled = false;
           submit.textContent = "Confirmar recibido";
+        } else if (action === "driver_waiting_admin") {
+          subtitle.textContent = "Explora debe pagar y cargar el comprobante. No tenés que subir archivo.";
+          submit.disabled = true;
+          submit.textContent = "Esperando Explora";
         } else {
           subtitle.textContent = completed ? "Cierre completo." : proof ? "Comprobante enviado. Esperando confirmación." : "Revisá el detalle del cierre solicitado.";
           submit.disabled = true;
@@ -1390,13 +1479,17 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       if (state.modalMode === "admin-review" && isAdmin()) {
         title.textContent = `Revisar ${closureTitle(kind).toLowerCase()}`;
         if (action === "admin_upload") {
-          subtitle.textContent = "El chofer pidió el cierre. Pagá y cargá el comprobante para notificarlo.";
+          subtitle.textContent = `${closureRequesterText(closure)}. Explora debe pagar y cargar el comprobante para notificar al chofer.`;
           submit.disabled = false;
           submit.textContent = "Enviar comprobante";
         } else if (action === "admin_review") {
-          subtitle.textContent = "El chofer cargó el comprobante. Confirmá si la foto está correcta.";
+          subtitle.textContent = `${closureDriverName(closure)} cargó el comprobante. Confirmá si la foto está correcta.`;
           submit.disabled = false;
           submit.textContent = "Confirmar cierre";
+        } else if (action === "admin_waiting_driver") {
+          subtitle.textContent = `${closureDriverName(closure)} debe pagar y cargar el comprobante. Explora no debe subir archivo.`;
+          submit.disabled = true;
+          submit.textContent = "Esperando chofer";
         } else {
           subtitle.textContent = completed ? "Cierre completo." : proof ? "Comprobante cargado. No corresponde subir otro comprobante." : "Esperando comprobante de quien debe pagar.";
           submit.disabled = true;
