@@ -5,7 +5,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 (() => {
   "use strict";
 
-  const VERSION = "explora-pago-home-v22-resumen-5050-anterior";
+  const VERSION = "explora-pago-home-v23-detalles-plegables-resumen-anterior";
   const AR_TZ = "America/Argentina/Cordoba";
   const $ = id => document.getElementById(id);
   const state = {
@@ -31,6 +31,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     modalKind:"",
     modalClosure:null,
     modalFile:null,
+    previousDetailsOpen:{ caja_chica:false, gastos:false, explora:false, chofer:false },
     busy:false
   };
 
@@ -365,6 +366,14 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       openClosureModal(pending && !isAdmin() ? "confirm" : "admin-review", pending, state.tab);
     });
     $("payBellBtn")?.addEventListener("click", () => showPayView("notificaciones"));
+    $("payMainSubtitle")?.addEventListener("click", event => {
+      const button = event.target?.closest?.("[data-pay-previous-toggle]");
+      if (!button) return;
+      const key = activeClosureKind(button.dataset.payPreviousToggle || state.tab);
+      if (!["caja_chica", "gastos", "explora", "chofer"].includes(key)) return;
+      state.previousDetailsOpen[key] = !state.previousDetailsOpen[key];
+      renderMainCard(state.latestSummary || computeSummary());
+    });
     $("payCardEnterBtn")?.addEventListener("click", () => {
       if (state.tab === "gastos") { runExistingAction("cargar-gastos"); return; }
       if (state.tab === "chofer" || state.tab === "explora") {
@@ -539,6 +548,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     state.expenses = [];
     state.closures = [];
     state.pendingClosure = null;
+    state.previousDetailsOpen = { caja_chica:false, gastos:false, explora:false, chofer:false };
     render();
     startRealtime("admin-driver-selected");
   }
@@ -1253,25 +1263,85 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     };
   }
 
-  function previousClosureSummaryHtml(kind = state.tab, uid = getDriverUid()) {
+  function previousExpenseClosureParts(row = {}) {
+    const total = firstUsefulNumber(row, ["expenseTotal", "mainTotal", "totalGastos", "total", "amount", "monto"]) ?? 0;
+    const byExplora = firstUsefulNumber(row, ["amountDueToDriver", "amountToDriver", "paidByExplora", "liquidadoPorExplora", "exploraPaidDriver", "exploraExpenseShare"]) ?? 0;
+    const rendered = firstUsefulNumber(row, ["settledTotal", "rendidoTotal", "expenseSettledTotal", "expenseTotal", "mainTotal", "total", "amount", "monto"]) ?? total;
+    return {
+      total:Math.max(0, total),
+      byExplora:Math.max(0, byExplora),
+      rendered:Math.max(0, rendered)
+    };
+  }
+
+  function previousCashboxClosureParts(row = {}) {
+    const total = firstUsefulNumber(row, ["cashboxTotal", "mainTotal", "totalCajaChica", "total", "amount", "monto"]) ?? 0;
+    const fromDriver = firstUsefulNumber(row, ["amountDueFromDriver", "amountFromDriver", "paidByDriver", "liquidadoPorChofer", "driverPaidExplora", "cashboxInDriver"]) ?? total;
+    return {
+      total:Math.max(0, total),
+      fromDriver:Math.max(0, fromDriver)
+    };
+  }
+
+  function previousSummaryRows(kind = state.tab, uid = getDriverUid()) {
     const row = previousClosureRow(kind, uid);
     const target = activeClosureKind(kind);
     if (!row) {
       const empty = isBillingClosureKind(target) ? "Sin facturación anterior" : "Sin cierre anterior";
-      return `<b class="pay-previous-single">${esc(empty)}</b>`;
+      return [[empty, ""]];
     }
-    const amount = closureSnapshotAmount(row, kind);
-    if (target === "gastos") return `<b class="pay-previous-single">${esc(`Gastos anteriores: ${currency(amount)}`)}</b>`;
-    if (target === "caja_chica") return `<b class="pay-previous-single">${esc(`Caja chica anterior: ${currency(amount)}`)}</b>`;
+    if (target === "gastos") {
+      const p = previousExpenseClosureParts(row);
+      return [
+        ["Gastos anteriores", currency(p.total)],
+        ["Liquidado por Explora", currency(p.byExplora)],
+        ["Total gastos anterior / rendido", currency(p.rendered)]
+      ];
+    }
+    if (target === "caja_chica") {
+      const p = previousCashboxClosureParts(row);
+      return [
+        ["Caja chica anterior", currency(p.total)],
+        ["Liquidado por chofer", currency(p.fromDriver)],
+        ["Total caja chica anterior", currency(p.total)]
+      ];
+    }
     if (target === "explora") {
       const p = previousBillingClosureParts(row);
-      return `<span class="pay-previous-breakdown" aria-label="Resumen de facturación anterior de Explora"><span>Digital anterior: <strong>${esc(currency(p.digital))}</strong></span><span>Liquidado por chofer: <strong>${esc(currency(p.fromDriver))}</strong></span><span>Total Explora anterior 50%: <strong>${esc(currency(p.share))}</strong></span></span>`;
+      return [
+        ["Digital anterior", currency(p.digital)],
+        ["Liquidado por chofer", currency(p.fromDriver)],
+        ["Total Explora anterior 50%", currency(p.share)]
+      ];
     }
     if (target === "chofer") {
       const p = previousBillingClosureParts(row);
-      return `<span class="pay-previous-breakdown" aria-label="Resumen de facturación anterior del chofer"><span>Efectivo anterior: <strong>${esc(currency(p.cash))}</strong></span><span>Liquidado por Explora: <strong>${esc(currency(p.toDriver))}</strong></span><span>Total chofer anterior 50%: <strong>${esc(currency(p.share))}</strong></span></span>`;
+      return [
+        ["Efectivo anterior", currency(p.cash)],
+        ["Liquidado por Explora", currency(p.toDriver)],
+        ["Total chofer anterior 50%", currency(p.share)]
+      ];
     }
-    return `<b class="pay-previous-single">${esc(`Facturación anterior: ${currency(amount)}`)}</b>`;
+    const amount = closureSnapshotAmount(row, kind);
+    return [["Facturación anterior", currency(amount)]];
+  }
+
+  function previousClosureSummaryHtml(kind = state.tab, uid = getDriverUid()) {
+    const target = activeClosureKind(kind) || "caja_chica";
+    const key = ["caja_chica", "gastos", "explora", "chofer"].includes(target) ? target : "caja_chica";
+    const open = !!state.previousDetailsOpen[key];
+    const panelId = `payPreviousSummary-${key}`;
+    const rows = previousSummaryRows(key, uid);
+    const rowsHtml = rows.map(([label, value]) => `
+        <span class="pay-previous-row">
+          <span>${esc(label)}</span>
+          ${value ? `<strong>${esc(value)}</strong>` : ""}
+        </span>`).join("");
+    return `<span class="pay-previous-details${open ? " is-open" : ""}">
+      <button class="pay-previous-toggle" type="button" data-pay-previous-toggle="${esc(key)}" aria-expanded="${open ? "true" : "false"}" aria-controls="${esc(panelId)}">${open ? "Ocultar detalles" : "Ver detalles"}</button>
+      <span class="pay-previous-panel" id="${esc(panelId)}"${open ? "" : " hidden"}>${rowsHtml}
+      </span>
+    </span>`;
   }
 
   function renderMainCard(summary) {
@@ -1834,6 +1904,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       state.selectedDriverUid = "";
       state.selectedDriverName = "";
     }
+    state.previousDetailsOpen = { caja_chica:false, gastos:false, explora:false, chofer:false };
     render();
     startRealtime("session");
   }
