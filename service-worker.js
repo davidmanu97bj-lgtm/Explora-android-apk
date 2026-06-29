@@ -1,7 +1,7 @@
 /* Compatibilidad validada: v2516-proof-final-clean */
 /* EXPLORA PWA service worker · v2.4.96 */
 const CACHE_PREFIX = 'explora-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v2516-proof-final-clean`;
+const CACHE_NAME = `${CACHE_PREFIX}v2517-closure-button-proof-clean`;
 const APP_SHELL = [
   './',
   './index.html',
