@@ -5,7 +5,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 (() => {
   "use strict";
 
-  const VERSION = "explora-pago-home-v35-km-inicial-auto";
+  const VERSION = "explora-pago-home-v36-km-inicial-solo-lectura";
   const AR_TZ = "America/Argentina/Cordoba";
   const $ = id => document.getElementById(id);
   const state = {
@@ -1128,12 +1128,17 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     return state.drivers.find(driver => driver.uid === targetUid)?.profile || {};
   }
 
-  function currentKmForEfficiency(uid = getDriverUid(), records = state.records, profile = driverProfileForEfficiency(uid)) {
+  function currentKmForEfficiency(uid = getDriverUid(), records = state.records, profile = driverProfileForEfficiency(uid), kmInicial = 0) {
+    const initial = Number(kmInicial || 0);
     const values = [kmNumberFrom(profile || {}, KM_CURRENT_FIELDS)]
       .concat((records || []).map(row => kmNumberFrom(row, KM_CURRENT_FIELDS)))
       .filter(value => value > 0)
       .sort((a,b)=>b-a);
-    return values[0] || 0;
+    const current = values[0] || 0;
+    // El último KM final guardado en un cierre pasa a ser el KM inicial del período abierto.
+    // No debe interpretarse como "KM actual" ni disparar un formulario manual al abrir eficiencia.
+    if (initial > 0 && current <= initial) return 0;
+    return current;
   }
 
   function lastKnownKmForValidation(uid = getDriverUid()) {
@@ -1271,10 +1276,9 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 
   function efficiencyMissingReason({ facturacion = 0, kmInicial = 0, kmActual = 0, kmRecorridos = 0, reference = 0 } = {}) {
     if (!(kmInicial > 0)) return "Falta cargar KM inicial.";
-    if (!(kmActual > 0)) return "Falta declarar KM actual.";
-    if (kmActual < kmInicial) return "El KM actual no puede ser menor al KM inicial.";
-    if (!(kmRecorridos > 0)) return "Falta declarar KM actual.";
+    if (kmActual > 0 && kmActual < kmInicial) return "El KM actual no puede ser menor al KM inicial.";
     if (!(facturacion > 0)) return "Falta facturación cargada.";
+    if (!(kmActual > 0) || !(kmRecorridos > 0)) return "KM inicial cargado. El KM final se declara al pedir cierre de facturación.";
     if (!(reference > 0)) return "Falta un cierre anterior válido para comparar.";
     return "";
   }
@@ -1291,7 +1295,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     const servicios = openRecords.length;
     const kmInicial = kmInitialForOpenPeriod(targetUid, driverClosures, profile);
     const kmSeedLoaded = hasKmInitialSeedForDriver(targetUid, driverClosures, profile);
-    const kmActual = currentKmForEfficiency(targetUid, openRecords, profile);
+    const kmActual = currentKmForEfficiency(targetUid, openRecords, profile, kmInicial);
     const kmRecorridos = kmActual > 0 && kmInicial > 0 ? kmActual - kmInicial : 0;
     const hasCurrent = facturacion > 0 && kmInicial > 0 && kmActual > 0 && kmRecorridos > 0;
     const eficiencia = hasCurrent ? facturacion / kmRecorridos : 0;
@@ -1443,7 +1447,16 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     const softWarning = (tone === "bad" || tone === "missing") ? `<div class="pay-efficiency-warning">Si el resultado parece bajo, chequeá si no olvidaste cargar algún cobro o actualizar tus kilómetros.</div>` : "";
     const missingReason = tone === "missing" && snapshot.missingReason ? `<div class="pay-efficiency-missing-reason">${esc(snapshot.missingReason)}</div>` : "";
     const initialKmForm = tone === "missing" && !(snapshot.kmInicial > 0) && !snapshot.kmSeedLoaded ? renderInitialKmForm(snapshot) : "";
-    const currentKmForm = tone === "missing" && snapshot.kmInicial > 0 && !(snapshot.kmRecorridos > 0) ? renderCurrentKmForm(snapshot) : "";
+    // No se pide KM actual al entrar a Eficiencia Operativa.
+    // El KM final/current se carga solo en el cierre de facturación y luego pasa a ser el nuevo KM inicial.
+    const currentKmForm = "";
+    const kmReadonlyNote = snapshot.kmInicial > 0 && !(snapshot.kmRecorridos > 0)
+      ? `<div class="pay-efficiency-note">KM inicial: ${esc(Math.round(snapshot.kmInicial))} km. El KM final se cargará al pedir cierre de facturación.</div>`
+      : "";
+    const kmCardLabel = snapshot.kmRecorridos > 0 ? "KM recorridos" : "KM inicial";
+    const kmCardValue = snapshot.kmRecorridos > 0
+      ? `${esc(Math.round(snapshot.kmRecorridos))} km`
+      : (snapshot.kmInicial > 0 ? `${esc(Math.round(snapshot.kmInicial))} km` : "—");
     const driverLabel = (isAdmin() ? (state.selectedDriverName || snapshot.name || "chofer") : (snapshot.name || displayName())).toUpperCase();
     const deltaLine = efficiencyHeadlineDelta(snapshot) ? `<span class="pay-efficiency-delta">${esc(efficiencyHeadlineDelta(snapshot))}</span>` : "";
     body.innerHTML = `
@@ -1458,12 +1471,13 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       </div>
       <div class="pay-efficiency-grid pay-efficiency-grid-simple">
         <article><span>Facturación actual</span><strong>${currency(snapshot.facturacion || 0)}</strong></article>
-        <article><span>KM recorridos</span><strong>${snapshot.kmRecorridos > 0 ? `${esc(Math.round(snapshot.kmRecorridos))} km` : "—"}</strong></article>
+        <article><span>${esc(kmCardLabel)}</span><strong>${kmCardValue}</strong></article>
         <article><span>Actual</span><strong>${efficiencyMoneyPerKm(snapshot.eficiencia)}</strong></article>
         <article><span>Anterior</span><strong>${efficiencyMoneyPerKm(snapshot.referenciaPropia)}</strong></article>
       </div>
       <p class="pay-efficiency-main-text">${esc(efficiencyResultText(snapshot))}</p>
       ${missingReason}
+      ${kmReadonlyNote}
       ${initialKmForm}
       ${currentKmForm}
       <div class="pay-efficiency-disclaimer">Este resultado se calcula con tu facturación cargada y tus kilómetros declarados.</div>
