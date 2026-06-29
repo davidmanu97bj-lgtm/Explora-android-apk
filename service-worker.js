@@ -1,7 +1,7 @@
-/* Compatibilidad validada: v3922-billing-visual-soft-symmetry */
+/* Compatibilidad validada: v3923-billing-modal-top-method-colors */
 /* EXPLORA PWA service worker · v2.5.1 */
 const CACHE_PREFIX = 'explora-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v3922-billing-visual-soft-symmetry`;
+const CACHE_NAME = `${CACHE_PREFIX}v3923-billing-modal-top-method-colors`;
 const APP_SHELL = [
   './',
   './index.html',
