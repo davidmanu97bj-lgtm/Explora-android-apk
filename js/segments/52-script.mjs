@@ -917,9 +917,15 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 
     const pending = pendingClosureFor(getDriverUid(), target);
     if (pending) {
-      // Si ya existe un cierre pedido, no se habilita un nuevo pedido desde la tarjeta.
-      // La acción pendiente se resuelve desde la campana/notificación o desde el detalle del cierre.
-      if (target === "chofer" || target === "explora" || target === "facturacion") return { visible:true, enabled:false, pending:true };
+      // Si existe un cierre anterior pendiente, NO debe bloquear un nuevo período abierto.
+      // Facturación corta Chofer+Explora juntos; por eso, si después del corte Explora vuelve a
+      // tener más dinero que el chofer, el botón de Explora debe habilitarse nuevamente.
+      if (target === "explora" || target === "facturacion") {
+        const t = tabSummary(summary, "explora");
+        const amountToDriver = number(summary.amountToDriverForBilling || t.amountToDriver || 0);
+        return { visible:true, enabled:amountToDriver > 0.49, pending:true };
+      }
+      if (target === "chofer") return { visible:true, enabled:false, pending:true };
       if (target === "caja_chica" || target === "gastos") return { visible:true, enabled:false, pending:true };
       return { visible:false, enabled:false, pending:true };
     }
