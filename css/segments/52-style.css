@@ -1,4 +1,4 @@
-/* EXPLORA · Pago Home v16 · comprobantes finales y caja chica limpia */
+/* EXPLORA · Pago Home v17 · cierres limpios y botones bloqueados */
 :root{
   --pay-gold:#e9bf45;
   --pay-gold-2:#f4d857;
@@ -74,7 +74,7 @@ body.explora-pay-mode #mainBottomNav.performance-bottom-nav{
 .pay-action{min-height:108px;border:0;border-radius:24px;background:#eaf1ff;color:var(--pay-blue);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:820;line-height:1.1;padding:12px 8px;text-align:center;}
 .pay-action svg{width:31px;height:31px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
 .pay-action.is-closure-ready{background:var(--pay-blue);color:#fff;box-shadow:0 10px 22px rgba(77,79,229,.28);}
-.pay-action.is-closure-locked{background:#eef1f7;color:#9aa2b5;box-shadow:none;cursor:not-allowed;}
+.pay-action.is-closure-locked{background:rgba(255,255,255,.34);color:rgba(55,59,78,.38);border:1px solid rgba(158,166,190,.34);box-shadow:none;cursor:not-allowed;}
 .pay-action:disabled{pointer-events:none;}
 .pay-liquid-pill{background:#f4f5fa;border-radius:999px;padding:13px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;color:#282a3a;font-size:18px;line-height:1.22;}
 .pay-liquid-pill strong{font-size:18px;font-weight:850;white-space:nowrap;}
@@ -122,7 +122,7 @@ body.explora-pay-mode #mainBottomNav.performance-bottom-nav{
 .pay-closure-field select,.pay-closure-field input{width:100%;border:1px solid var(--pay-line);border-radius:16px;padding:13px 14px;font-size:16px;background:#fff;color:var(--pay-ink);}
 .pay-closure-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;}
 .pay-closure-actions button{border:0;border-radius:16px;padding:14px 12px;font-size:15px;font-weight:850;}
-.pay-closure-actions button:disabled{opacity:.55;filter:grayscale(.18);}
+.pay-closure-actions[hidden]{display:none!important;} .pay-closure-actions button:disabled{opacity:.55;filter:grayscale(.18);} .pay-closure-actions button[hidden]{display:none!important;}
 .pay-closure-secondary{background:#eef1f9;color:#303447;}.pay-closure-primary{background:var(--pay-blue);color:#fff;}.pay-closure-danger{background:#ca3a3a;color:#fff;}
 .pay-closure-message{min-height:20px;margin-top:10px;font-size:13px;font-weight:700;color:#596073;}
 .pay-closure-message.is-error{color:#be2e2e}.pay-closure-message.is-ok{color:#25823a}
