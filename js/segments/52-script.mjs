@@ -5,7 +5,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 (() => {
   "use strict";
 
-  const VERSION = "explora-pago-home-v2-split-on-demand-closures";
+  const VERSION = "explora-pago-home-v3-billing-balance-expenses-separate";
   const AR_TZ = "America/Argentina/Cordoba";
   const $ = id => document.getElementById(id);
   const state = {
@@ -84,9 +84,15 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
   function activeClosureKind(kind = state.tab) {
     const raw = safe(kind).toLowerCase();
     if (/gasto|expense/.test(raw)) return "gastos";
+    if (/factur|billing|cobro/.test(raw)) return "facturacion";
     if (/explora|digital|transfer|qr|card|tarjeta/.test(raw)) return "explora";
     if (/chofer|driver|efectivo|cash/.test(raw)) return "chofer";
     return "";
+  }
+
+  function isBillingClosureKind(kind = state.tab) {
+    const target = activeClosureKind(kind);
+    return target === "chofer" || target === "explora" || target === "facturacion";
   }
 
   function closureKindOf(row = {}) {
@@ -94,15 +100,15 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
   }
 
   function isClosureTab(kind = state.tab) {
-    return ["gastos", "explora", "chofer"].includes(activeClosureKind(kind));
+    return ["gastos", "explora", "chofer", "facturacion"].includes(activeClosureKind(kind));
   }
 
   function closureLabel(kind = state.tab) {
-    return ({ gastos:"gastos", explora:"Explora", chofer:"chofer" })[activeClosureKind(kind)] || "";
+    return ({ gastos:"gastos", explora:"facturación", chofer:"facturación", facturacion:"facturación" })[activeClosureKind(kind)] || "";
   }
 
   function closureTitle(kind = state.tab) {
-    return ({ gastos:"CIERRE DE GASTOS", explora:"CIERRE DE EXPLORA", chofer:"CIERRE DEL CHOFER" })[activeClosureKind(kind)] || "CIERRE";
+    return ({ gastos:"CIERRE DE GASTOS", explora:"CIERRE DE FACTURACIÓN", chofer:"CIERRE DE FACTURACIÓN", facturacion:"CIERRE DE FACTURACIÓN" })[activeClosureKind(kind)] || "CIERRE";
   }
 
   function expensePayer(row = {}) {
@@ -233,8 +239,15 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       render();
     }));
     document.querySelectorAll("[data-pay-run]").forEach(button => button.addEventListener("click", () => runExistingAction(button.dataset.payRun)));
-    $("payClosureActionBtn")?.addEventListener("click", () => openClosureModal("request", null, state.tab));
-    $("payQuickClosureBtn")?.addEventListener("click", () => { if (isClosureTab(state.tab)) openClosureModal("request", null, state.tab); });
+    $("payClosureActionBtn")?.addEventListener("click", () => {
+      const pending = pendingClosureFor(getDriverUid(), state.tab);
+      openClosureModal(pending && !isAdmin() ? "confirm" : "request", pending, state.tab);
+    });
+    $("payQuickClosureBtn")?.addEventListener("click", () => {
+      if (!isClosureTab(state.tab)) return;
+      const pending = pendingClosureFor(getDriverUid(), state.tab);
+      openClosureModal(pending && !isAdmin() ? "confirm" : "request", pending, state.tab);
+    });
     $("payNavClosure")?.addEventListener("click", () => {
       const kind = isClosureTab(state.tab) ? state.tab : "gastos";
       const pending = pendingClosureFor(getDriverUid(), kind);
@@ -332,7 +345,12 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     if (!target) return 0;
     const cuts = rows
       .filter(row => safe(row.closureMode || row.periodType) === "on_demand")
-      .filter(row => closureKindOf(row) === target)
+      .filter(row => {
+        const rowKind = closureKindOf(row);
+        if (target === "gastos") return rowKind === "gastos";
+        if (isBillingClosureKind(target)) return isBillingClosureKind(rowKind);
+        return rowKind === target;
+      })
       .filter(row => !/cancelled|canceled|anulado|rechazado/i.test(safe(row.status || row.estado)))
       .map(row => Math.max(
         Number(row.cutoffAtMs || 0), Number(row.requestedAtMs || 0), Number(row.driverUploadedAtMs || 0), Number(row.confirmedAtMs || 0),
@@ -348,21 +366,27 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     if (!target) return null;
     const pending = state.closures
       .filter(row => safe(row.closureMode || row.periodType) === "on_demand")
-      .filter(row => closureKindOf(row) === target)
+      .filter(row => {
+        const rowKind = closureKindOf(row);
+        if (target === "gastos") return rowKind === "gastos";
+        if (isBillingClosureKind(target)) return isBillingClosureKind(rowKind);
+        return rowKind === target;
+      })
       .filter(row => !uid || [row.driverUid,row.choferUid,row.uid].map(safe).includes(uid))
-      .filter(row => !/confirmed|completed|closed|cancelled|canceled|anulado|rechazado/i.test(safe(row.status || row.estado)))
+      .filter(row => !/confirmed|completed|closed|cerrado|al_dia|al día|pagado|cancelled|canceled|anulado|rechazado/i.test(safe(row.status || row.estado)))
       .sort((a,b)=>rowMs(b)-rowMs(a));
     return pending[0] || null;
   }
 
   function computeSummary({ records = state.records, expenses = state.expenses, closures = state.closures } = {}) {
-    const resetCashMs = lastClosureMs(closures, "chofer");
-    const resetExploraMs = lastClosureMs(closures, "explora");
+    // Nuevo modo: Chofer y Explora son dos vistas del mismo cierre de facturación.
+    // El corte de cualquiera de los dos corta toda la facturación: efectivo + digital.
+    const resetBillingMs = Math.max(lastClosureMs(closures, "chofer"), lastClosureMs(closures, "explora"), lastClosureMs(closures, "facturacion"));
     const resetExpensesMs = lastClosureMs(closures, "gastos");
 
-    const cashRecords = records.filter(row => methodOf(row) === "cash" && rowMs(row) > resetCashMs);
-    const exploraRecords = records.filter(row => methodOf(row) !== "cash" && rowMs(row) > resetExploraMs);
-    const filteredRecords = [...cashRecords, ...exploraRecords].sort((a,b)=>rowMs(b)-rowMs(a));
+    const billingRecords = records.filter(row => rowMs(row) > resetBillingMs).sort((a,b)=>rowMs(b)-rowMs(a));
+    const cashRecords = billingRecords.filter(row => methodOf(row) === "cash");
+    const exploraRecords = billingRecords.filter(row => methodOf(row) !== "cash");
     const filteredExpenses = expenses.filter(row => rowMs(row) > resetExpensesMs).sort((a,b)=>rowMs(b)-rowMs(a));
 
     let cashInDriver = 0, nonCashInExplora = 0;
@@ -376,68 +400,68 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     }
 
     const gross = cashInDriver + nonCashInExplora;
-    const driverShareFromCash = cashInDriver * .5;
-    const exploraShareFromCash = cashInDriver * .5;
-    const driverShareFromExplora = nonCashInExplora * .5;
-    const exploraShareFromExplora = nonCashInExplora * .5;
+    const billingShareEach = gross * .5;
+    const billingNetToDriver = billingShareEach - cashInDriver;
+    const amountToDriverForBilling = Math.max(0, billingNetToDriver);
+    const amountFromDriverForBilling = Math.max(0, -billingNetToDriver);
 
     let expenseTotal = 0, driverExpenseShare = 0, exploraExpenseShare = 0, expensesPaidByDriver = 0, expensesPaidByExplora = 0;
-    let expenseAmountToDriver = 0, expenseAmountFromDriver = 0;
+    let expenseAmountToDriver = 0;
     for (const row of filteredExpenses) {
       const { amount, driverPart, exploraPart, payer } = expenseParts(row);
       if (!(amount > 0)) continue;
       expenseTotal += amount;
       driverExpenseShare += driverPart;
       exploraExpenseShare += exploraPart;
-      if (payer === "explora") {
-        expensesPaidByExplora += amount;
-        expenseAmountFromDriver += driverPart;
-      } else {
-        expensesPaidByDriver += amount;
-        expenseAmountToDriver += exploraPart;
-      }
+      if (payer === "explora") expensesPaidByExplora += amount;
+      else expensesPaidByDriver += amount;
+      // Nuevo modo de gastos: los gastos se cierran aparte y Explora reintegra siempre su mitad al chofer.
+      expenseAmountToDriver += exploraPart;
     }
+    const expenseAmountFromDriver = 0;
+    const netSettlementToDriver = billingNetToDriver + expenseAmountToDriver;
 
-    const amountFromDriverForCash = exploraShareFromCash;
-    const amountToDriverForExplora = driverShareFromExplora;
-    const netSettlementToDriver = (amountToDriverForExplora + expenseAmountToDriver) - (amountFromDriverForCash + expenseAmountFromDriver);
-    const driverActualCash = cashInDriver - expensesPaidByDriver;
-    const exploraCash = nonCashInExplora - expensesPaidByExplora;
+    const billingTab = {
+      resetMs:resetBillingMs, records:billingRecords, expenses:[], gross, expenseTotal:0,
+      cashInDriver, nonCashInExplora, billingShareEach,
+      amountToDriver:amountToDriverForBilling, amountFromDriver:amountFromDriverForBilling,
+      netSettlementToDriver:billingNetToDriver,
+      summaryLabel:"Facturación abierta"
+    };
 
     const tabs = {
       bruto:{
-        kind:"bruto", resetMs:Math.min(resetCashMs||0, resetExploraMs||0, resetExpensesMs||0), records:filteredRecords, expenses:filteredExpenses,
-        gross, expenseTotal, mainTotal:gross, amountToDriver:Math.max(0, netSettlementToDriver), amountFromDriver:Math.max(0, -netSettlementToDriver), netSettlementToDriver
+        kind:"bruto", resetMs:Math.min(resetBillingMs||0, resetExpensesMs||0), records:billingRecords, expenses:filteredExpenses,
+        gross, expenseTotal, mainTotal:gross, amountToDriver:0, amountFromDriver:0, netSettlementToDriver:0,
+        cashInDriver, nonCashInExplora, billingShareEach
       },
       gastos:{
         kind:"gastos", resetMs:resetExpensesMs, records:[], expenses:filteredExpenses, gross:0, expenseTotal,
-        amountToDriver:expenseAmountToDriver, amountFromDriver:expenseAmountFromDriver, netSettlementToDriver:expenseAmountToDriver - expenseAmountFromDriver,
+        driverExpenseShare, exploraExpenseShare, expensesPaidByDriver, expensesPaidByExplora,
+        amountToDriver:expenseAmountToDriver, amountFromDriver:expenseAmountFromDriver, netSettlementToDriver:expenseAmountToDriver,
         summaryLabel:"Gastos cargados por el chofer"
       },
-      explora:{
-        kind:"explora", resetMs:resetExploraMs, records:exploraRecords, expenses:[], gross:nonCashInExplora, expenseTotal:0,
-        amountToDriver:amountToDriverForExplora, amountFromDriver:0, netSettlementToDriver:amountToDriverForExplora,
-        summaryLabel:"Facturación cobrada por Explora"
-      },
-      chofer:{
-        kind:"chofer", resetMs:resetCashMs, records:cashRecords, expenses:[], gross:cashInDriver, expenseTotal:0,
-        amountToDriver:0, amountFromDriver:amountFromDriverForCash, netSettlementToDriver:-amountFromDriverForCash,
-        summaryLabel:"Efectivo cobrado por el chofer"
-      }
+      explora:{ kind:"explora", ...billingTab, summaryLabel:"Facturación cobrada por Chofer y Explora" },
+      chofer:{ kind:"chofer", ...billingTab, summaryLabel:"Facturación cobrada por Chofer y Explora" },
+      facturacion:{ kind:"facturacion", ...billingTab, summaryLabel:"Facturación cobrada por Chofer y Explora" }
     };
 
     return {
       resetMs:tabs[activeClosureKind(state.tab) || "bruto"]?.resetMs || 0,
-      records:filteredRecords, cashRecords, exploraRecords, expenses:filteredExpenses, tabs,
-      gross, cashInDriver, nonCashInExplora, driverShare:driverShareFromCash + driverShareFromExplora, exploraShare:exploraShareFromCash + exploraShareFromExplora,
-      driverShareFromCash, exploraShareFromCash, driverShareFromExplora, exploraShareFromExplora,
+      records:billingRecords, billingRecords, cashRecords, exploraRecords, expenses:filteredExpenses, tabs,
+      gross, cashInDriver, nonCashInExplora, billingShareEach,
+      driverShare:billingShareEach, exploraShare:billingShareEach,
+      driverShareFromCash:cashInDriver * .5, exploraShareFromCash:cashInDriver * .5,
+      driverShareFromExplora:nonCashInExplora * .5, exploraShareFromExplora:nonCashInExplora * .5,
       expenseTotal, driverExpenseShare, exploraExpenseShare, expensesPaidByDriver, expensesPaidByExplora,
       expenseAmountToDriver, expenseAmountFromDriver,
-      driverActualCash, exploraCash,
-      driverEntitlement:driverShareFromCash + driverShareFromExplora + expenseAmountToDriver - expenseAmountFromDriver,
+      driverActualCash:cashInDriver,
+      exploraCash:nonCashInExplora,
+      driverEntitlement:billingShareEach,
       netSettlementToDriver,
-      driverFinal:driverShareFromCash + driverShareFromExplora,
-      amountToDriver:Math.max(0, netSettlementToDriver), amountFromDriver:Math.max(0, -netSettlementToDriver)
+      driverFinal:billingShareEach,
+      amountToDriver:Math.max(0, netSettlementToDriver), amountFromDriver:Math.max(0, -netSettlementToDriver),
+      amountToDriverForBilling, amountFromDriverForBilling, billingNetToDriver
     };
   }
 
@@ -457,8 +481,8 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
         at, type:"payment", title:`${dateShort(at)} · ${paymentLabel(method)}`,
         meta:safe(row.description || row.detalle || row.notes || row.ruta || "Servicio registrado"),
         detail: method === "cash"
-          ? `Cobró el chofer: ${currency(amount)} · Cierre Chofer: debe rendir a Explora ${currency(amount*.5)} y conserva ${currency(amount*.5)}`
-          : `Cobró Explora: ${currency(amount)} · Cierre Explora: debe pagar al chofer ${currency(amount*.5)} y conserva ${currency(amount*.5)}`,
+          ? `Cobró el chofer en efectivo: ${currency(amount)} · En el cierre de facturación se compara contra lo cobrado por Explora`
+          : `Cobró Explora: ${currency(amount)} · En el cierre de facturación se compara contra el efectivo del chofer`,
         amount, positive:true
       });
     }
@@ -469,15 +493,17 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       rows.push({
         at, type:"expense", title:`${dateShort(at)} · ${expenseTypeLabel(row)}`,
         meta:safe(row.notes || row.descripcion || row.description || "Gasto operativo"),
-        detail: payer === "driver"
-          ? `Pagó el chofer: ${currency(amount)} · Explora reintegra ${currency(exploraPart)} · Parte chofer ${currency(driverPart)}`
-          : `Pagó Explora/Ualá: ${currency(amount)} · Chofer reconoce ${currency(driverPart)} · Parte Explora ${currency(exploraPart)}`,
+        detail: `Gasto cargado por el chofer: ${currency(amount)} · Explora reintegra ${currency(exploraPart)} · Parte chofer ${currency(driverPart)}`,
         amount:-amount, negative:true
       });
     }
     for (const row of state.closures.filter(r => safe(r.closureMode || r.periodType) === "on_demand")) {
       const closureKind = closureKindOf(row);
-      if (state.tab !== "bruto" && kind && closureKind !== kind) continue;
+      if (state.tab !== "bruto" && kind) {
+        if (kind === "gastos" && closureKind !== "gastos") continue;
+        if (isBillingClosureKind(kind) && !isBillingClosureKind(closureKind)) continue;
+        if (!isBillingClosureKind(kind) && closureKind !== kind) continue;
+      }
       const at = rowMs(row);
       rows.push({
         at, type:"closure", title:`${dateShort(at)} · ${closureTitle(closureKind)}`,
@@ -527,24 +553,26 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     } else if (state.tab === "explora") {
       const t = tabSummary(summary, "explora");
       main = summary.nonCashInExplora;
-      sub = "Solo transferencias, QR y tarjetas cobradas por Explora";
-      pill = "Explora debe pagar al chofer";
-      pillValue = t.amountToDriver;
+      sub = "Facturación abierta: se compara digital de Explora contra efectivo del chofer";
+      pill = t.amountToDriver > 0 ? "Explora paga al chofer" : t.amountFromDriver > 0 ? "Chofer paga a Explora" : "Facturación equilibrada";
+      pillValue = Math.max(t.amountToDriver, t.amountFromDriver);
       lines.push(
-        ["Transferencia / QR / Tarjeta", currency(summary.nonCashInExplora)],
-        ["Parte chofer 50%", currency(summary.driverShareFromExplora)],
-        ["Parte Explora 50%", currency(summary.exploraShareFromExplora)]
+        ["Digital cobrado por Explora", currency(summary.nonCashInExplora)],
+        ["Efectivo cobrado por chofer", currency(summary.cashInDriver)],
+        ["Total facturado", currency(summary.gross)],
+        ["Parte de cada uno 50%", currency(summary.billingShareEach)]
       );
     } else if (state.tab === "chofer") {
       const t = tabSummary(summary, "chofer");
       main = summary.cashInDriver;
-      sub = "Solo efectivo cobrado por el chofer";
-      pill = "Chofer debe pagar a Explora";
-      pillValue = t.amountFromDriver;
+      sub = "Facturación abierta: se compara efectivo del chofer contra digital de Explora";
+      pill = t.amountToDriver > 0 ? "Explora paga al chofer" : t.amountFromDriver > 0 ? "Chofer paga a Explora" : "Facturación equilibrada";
+      pillValue = Math.max(t.amountToDriver, t.amountFromDriver);
       lines.push(
-        ["Efectivo cobrado", currency(summary.cashInDriver)],
-        ["Parte chofer 50%", currency(summary.driverShareFromCash)],
-        ["Parte Explora 50%", currency(summary.exploraShareFromCash)]
+        ["Efectivo cobrado por chofer", currency(summary.cashInDriver)],
+        ["Digital cobrado por Explora", currency(summary.nonCashInExplora)],
+        ["Total facturado", currency(summary.gross)],
+        ["Parte de cada uno 50%", currency(summary.billingShareEach)]
       );
     } else {
       main = summary.gross;
@@ -689,11 +717,11 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       : "El corte será inmediato: lo nuevo que cargues después empieza desde cero en este mismo tipo de cierre.";
     submit.textContent = `Pedir ${closureTitle(kind).toLowerCase()}`;
     if (kind === "gastos") {
-      summary.innerHTML = `<article><span>Gastos abiertos</span><strong>${currency(latest.expenseTotal)}</strong></article><article><span>Explora reintegra al chofer</span><strong>${currency(latest.amountToDriver)}</strong></article><article><span>Chofer reconoce a Explora</span><strong>${currency(latest.amountFromDriver)}</strong></article>`;
-    } else if (kind === "explora") {
-      summary.innerHTML = `<article><span>Cobrado por Explora</span><strong>${currency(latest.gross)}</strong></article><article><span>Parte chofer 50%</span><strong>${currency(latest.amountToDriver)}</strong></article><article><span>Parte Explora 50%</span><strong>${currency(latest.gross * .5)}</strong></article>`;
+      summary.innerHTML = `<article><span>Gastos abiertos</span><strong>${currency(latest.expenseTotal)}</strong></article><article><span>Parte chofer 50%</span><strong>${currency(latest.driverExpenseShare || 0)}</strong></article><article><span>Explora reintegra al chofer</span><strong>${currency(latest.amountToDriver)}</strong></article>`;
     } else {
-      summary.innerHTML = `<article><span>Efectivo del chofer</span><strong>${currency(latest.gross)}</strong></article><article><span>Parte chofer 50%</span><strong>${currency(latest.gross * .5)}</strong></article><article><span>Chofer debe rendir a Explora</span><strong>${currency(latest.amountFromDriver)}</strong></article>`;
+      const resultLabel = latest.amountToDriver > 0 ? "Explora paga al chofer" : latest.amountFromDriver > 0 ? "Chofer paga a Explora" : "Facturación equilibrada";
+      const resultValue = Math.max(latest.amountToDriver || 0, latest.amountFromDriver || 0);
+      summary.innerHTML = `<article><span>Efectivo chofer</span><strong>${currency(latest.cashInDriver || 0)}</strong></article><article><span>Digital Explora</span><strong>${currency(latest.nonCashInExplora || 0)}</strong></article><article><span>Total facturado</span><strong>${currency(latest.gross || 0)}</strong></article><article><span>Parte de cada uno</span><strong>${currency(latest.billingShareEach || 0)}</strong></article><article><span>${esc(resultLabel)}</span><strong>${currency(resultValue)}</strong></article>`;
     }
   }
 
@@ -745,6 +773,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       closureKind:kind,
       closureType:kind,
       payTab:kind,
+      billingClosure:isBillingClosureKind(kind),
       status:"requested",
       estado:"solicitado",
       statusLabel:`${closureTitle(kind)} solicitado`,
@@ -757,8 +786,9 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       requestedByRole:isAdmin() ? "admin" : "driver",
       gross:Number(summary.gross || 0),
       expenseTotal:Number(summary.expenseTotal || 0),
-      cashInDriver:Number(kind === "chofer" ? summary.gross : 0),
-      exploraCash:Number(kind === "explora" ? summary.gross : 0),
+      cashInDriver:Number(summary.cashInDriver || 0),
+      exploraCash:Number(summary.nonCashInExplora || 0),
+      billingShareEach:Number(summary.billingShareEach || 0),
       netSettlementToDriver:Number(summary.netSettlementToDriver || 0),
       amountDueFromDriver:Number(summary.amountFromDriver || 0),
       amountDueToDriver:Number(summary.amountToDriver || 0),
