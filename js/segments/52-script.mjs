@@ -5,7 +5,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 (() => {
   "use strict";
 
-  const VERSION = "explora-pago-home-v19-admin-driver-notifications-filtered";
+  const VERSION = "explora-pago-home-v20-closure-result-green";
   const AR_TZ = "America/Argentina/Cordoba";
   const $ = id => document.getElementById(id);
   const state = {
@@ -1408,7 +1408,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       ["Tipo de cierre", kindLabel],
       ["Corte", cut],
       ["Estado", status],
-      [result, currency(amount)]
+      [result, currency(amount), "closure-payment-result settlement-result-green"]
     ];
     const detail = k === "caja_chica"
       ? [["Efectivo base", currency(closure.cashboxGross || gross)], ["Caja chica total 5%", currency(closure.cashboxTotal || closure.mainTotal || amount)], ["En poder del chofer", currency(closure.cashboxInDriver || due)]]
@@ -1417,7 +1417,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
         : [["Efectivo chofer", currency(cash)], ["Digital Explora", currency(digital)], ["Total facturado", currency(gross)], ["Parte de cada uno", currency(share)]];
     const receiptUrl = closureProofUrl(closure);
     const receipt = receiptUrl ? [["Comprobante", "cargado"]] : [];
-    const rows = base.concat(detail, [["Estado", closureStatusText(closure)]], receipt).map(([label,value]) => `<article><span>${esc(label)}</span><strong>${esc(value)}</strong></article>`).join("");
+    const rows = base.concat(detail, [["Estado", closureStatusText(closure)]], receipt).map(([label,value,className]) => `<article${className ? ` class="${esc(className)}"` : ""}><span>${esc(label)}</span><strong>${esc(value)}</strong></article>`).join("");
     const receiptLink = receiptUrl ? `<a class="pay-closure-receipt-link" href="${esc(receiptUrl)}" target="_blank" rel="noopener">Abrir comprobante</a>` : "";
     const alert = due > 0 && !receiptUrl && !adminView ? `<div class="pay-closure-alert">Para quedar al día, cargá el comprobante de transferencia.</div>` : "";
     return rows + receiptLink + alert;
@@ -1510,11 +1510,11 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     // Regla: el solicitante nunca sube comprobante al pedir —el cierre queda ABIERTO para la otra parte.
     fileField.hidden = true;
     if (kind === "caja_chica") {
-      summary.innerHTML = `<article><span>Efectivo base</span><strong>${currency(latest.gross || 0)}</strong></article><article><span>Caja chica 5%</span><strong>${currency(latest.cashboxTotal || 0)}</strong></article><article><span>En poder del chofer</span><strong>${currency(latest.cashboxInDriver || 0)}</strong></article><article><span>Chofer pasa a Explora</span><strong>${currency(latest.amountFromDriver || 0)}</strong></article>`;
+      summary.innerHTML = `<article><span>Efectivo base</span><strong>${currency(latest.gross || 0)}</strong></article><article><span>Caja chica 5%</span><strong>${currency(latest.cashboxTotal || 0)}</strong></article><article><span>En poder del chofer</span><strong>${currency(latest.cashboxInDriver || 0)}</strong></article><article class="closure-payment-result settlement-result-green"><span>Chofer pasa a Explora</span><strong>${currency(latest.amountFromDriver || 0)}</strong></article>`;
     } else if (kind === "gastos") {
-      summary.innerHTML = `<article><span>Gastos cargados</span><strong>${currency(latest.expenseTotal || 0)}</strong></article><article><span>Parte chofer</span><strong>${currency(latest.driverExpenseShare || 0)}</strong></article><article><span>Parte Explora</span><strong>${currency(latest.exploraExpenseShare || 0)}</strong></article><article><span>Explora reintegra</span><strong>${currency(latest.amountToDriver || 0)}</strong></article>`;
+      summary.innerHTML = `<article><span>Gastos cargados</span><strong>${currency(latest.expenseTotal || 0)}</strong></article><article><span>Parte chofer</span><strong>${currency(latest.driverExpenseShare || 0)}</strong></article><article><span>Parte Explora</span><strong>${currency(latest.exploraExpenseShare || 0)}</strong></article><article class="closure-payment-result settlement-result-green"><span>Explora reintegra</span><strong>${currency(latest.amountToDriver || 0)}</strong></article>`;
     } else {
-      summary.innerHTML = `<article><span>Efectivo chofer</span><strong>${currency(latest.cashInDriver || 0)}</strong></article><article><span>Digital Explora</span><strong>${currency(latest.nonCashInExplora || 0)}</strong></article><article><span>Total facturado</span><strong>${currency(latest.gross || 0)}</strong></article><article><span>Parte de cada uno</span><strong>${currency(latest.billingShareEach || 0)}</strong></article><article><span>Resultado</span><strong>${latest.amountFromDriver > 0 ? `Chofer paga ${currency(latest.amountFromDriver)}` : latest.amountToDriver > 0 ? `Explora paga ${currency(latest.amountToDriver)}` : "Equilibrado"}</strong></article>`;
+      summary.innerHTML = `<article><span>Efectivo chofer</span><strong>${currency(latest.cashInDriver || 0)}</strong></article><article><span>Digital Explora</span><strong>${currency(latest.nonCashInExplora || 0)}</strong></article><article><span>Total facturado</span><strong>${currency(latest.gross || 0)}</strong></article><article><span>Parte de cada uno</span><strong>${currency(latest.billingShareEach || 0)}</strong></article><article class="closure-payment-result settlement-result-green"><span>Resultado</span><strong>${latest.amountFromDriver > 0 ? `Chofer paga ${currency(latest.amountFromDriver)}` : latest.amountToDriver > 0 ? `Explora paga ${currency(latest.amountToDriver)}` : "Equilibrado"}</strong></article>`;
     }
   }
 
