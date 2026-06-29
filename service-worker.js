@@ -1,7 +1,7 @@
-/* Compatibilidad validada: v2513-cierre-facturacion-resetea-ambos */
+/* Compatibilidad validada: v2514-clean-notification-target */
 /* EXPLORA PWA service worker · v2.4.95 */
 const CACHE_PREFIX = 'explora-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v2513-cierre-facturacion-resetea-ambos`;
+const CACHE_NAME = `${CACHE_PREFIX}v2514-clean-notification-target`;
 const APP_SHELL = [
   './',
   './index.html',
@@ -26,8 +26,8 @@ const APP_SHELL = [
   './css/segments/49-style.css?v=2456-personal-record-server-authoritative',
   './css/segments/50-style.css?v=2458-admin-driver-production-safe',
   './css/segments/51-style.css?v=2484-weekly-mileage-modal-ux',
-  './css/segments/52-style.css?v=2512-caja-chica-solo-efectivo',
-  './js/segments/52-script.mjs?v=2512-caja-chica-solo-efectivo',
+  './css/segments/52-style.css?v=2514-clean-notification-target',
+  './js/segments/52-script.mjs?v=2514-clean-notification-target',
   './js/segments/49-script.mjs?v=2488-mileage-close-fast',
   './js/segments/49-mileage-model.mjs?v=2477-weekly-mileage-v15-admin-card-clickable',
   './js/segments/44-script.mjs?v=2456-personal-record-server-authoritative',
