@@ -1267,8 +1267,24 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     return { value:valid[0].value, count:1, mode:"ultimo_cierre" };
   }
 
-  function efficiencyStatusFromOwn({ hasCurrent = false, reference = 0, deltaPct = NaN } = {}) {
-    if (!hasCurrent || !(reference > 0) || !Number.isFinite(deltaPct)) return { label:"Faltan datos", level:"Pendiente de datos", css:"efficiency-missing", tone:"missing" };
+  function efficiencyStatusFromOwn({ hasCurrent = false, reference = 0, deltaPct = NaN, facturacion = 0, kmInicial = 0, kmActual = 0, kmRecorridos = 0 } = {}) {
+    if (!(kmInicial > 0)) return { label:"Faltan datos", level:"Falta KM inicial", css:"efficiency-missing", tone:"missing" };
+    if (kmActual > 0 && kmActual < kmInicial) return { label:"Faltan datos", level:"KM inválido", css:"efficiency-missing", tone:"missing" };
+
+    // El período abierto NO es un error: si ya existe KM inicial, no debe marcarse
+    // como "Faltan datos" solo porque aún no hay cobros o porque el KM final se
+    // declara recién al pedir el cierre de facturación.
+    if (!hasCurrent) {
+      return {
+        label:"Período abierto",
+        level:facturacion > 0 ? "KM final al cierre" : "Esperando facturación",
+        css:"efficiency-mid",
+        tone:"open"
+      };
+    }
+
+    if (!(reference > 0)) return { label:"Sin historial", level:"Primer cierre válido", css:"efficiency-mid", tone:"history" };
+    if (!Number.isFinite(deltaPct)) return { label:"Período abierto", level:"Esperando cierre", css:"efficiency-mid", tone:"open" };
     if (deltaPct > 5) return { label:"Mejoró", level:"Eficiencia alta", css:"efficiency-good", tone:"good" };
     if (deltaPct < -5) return { label:"Bajó", level:"Eficiencia baja", css:"efficiency-bad", tone:"bad" };
     return { label:"Se mantiene", level:"Eficiencia estable", css:"efficiency-mid", tone:"mid" };
@@ -1277,9 +1293,9 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
   function efficiencyMissingReason({ facturacion = 0, kmInicial = 0, kmActual = 0, kmRecorridos = 0, reference = 0 } = {}) {
     if (!(kmInicial > 0)) return "Falta cargar KM inicial.";
     if (kmActual > 0 && kmActual < kmInicial) return "El KM actual no puede ser menor al KM inicial.";
-    if (!(facturacion > 0)) return "Falta facturación cargada.";
-    if (!(kmActual > 0) || !(kmRecorridos > 0)) return "KM inicial cargado. El KM final se declara al pedir cierre de facturación.";
-    if (!(reference > 0)) return "Falta un cierre anterior válido para comparar.";
+    if (!(facturacion > 0)) return "Aún no hay facturación cargada en el período abierto.";
+    if (!(kmActual > 0) || !(kmRecorridos > 0)) return "El KM final se declara al pedir cierre de facturación.";
+    if (!(reference > 0)) return "Este será el primer cierre válido para comparar.";
     return "";
   }
 
@@ -1302,8 +1318,8 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     const reference = ownEfficiencyReferenceForDriver(targetUid, driverClosures);
     const diferenciaPct = hasCurrent && reference.value > 0 ? ((eficiencia - reference.value) / reference.value) * 100 : NaN;
     const isComparable = hasCurrent && reference.value > 0 && Number.isFinite(diferenciaPct);
-    const missingReason = isComparable ? "" : efficiencyMissingReason({ facturacion, kmInicial, kmActual, kmRecorridos, reference:reference.value });
-    const status = efficiencyStatusFromOwn({ hasCurrent, reference:reference.value, deltaPct:diferenciaPct });
+    const status = efficiencyStatusFromOwn({ hasCurrent, reference:reference.value, deltaPct:diferenciaPct, facturacion, kmInicial, kmActual, kmRecorridos });
+    const missingReason = status.tone === "missing" ? efficiencyMissingReason({ facturacion, kmInicial, kmActual, kmRecorridos, reference:reference.value }) : "";
     return { uid:targetUid, name, resetMs, facturacion, servicios, kmInicial, kmSeedLoaded, kmActual, kmRecorridos, eficiencia, referenciaPropia:reference.value, referenciaConteo:reference.count, referenciaModo:reference.mode, diferenciaPct, missingReason, missingReasons:missingReason ? [missingReason] : [], status };
   }
 
@@ -1378,13 +1394,20 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
   }
 
   function efficiencyHeadlineDelta(snapshot = {}) {
-    if (snapshot.status?.tone === "missing" || !(snapshot.referenciaPropia > 0)) return "";
+    const tone = snapshot.status?.tone || "missing";
+    if (!["good", "mid", "bad"].includes(tone)) return "";
+    if (!(snapshot.referenciaPropia > 0) || !Number.isFinite(snapshot.diferenciaPct)) return "";
     return `${signedPercent(snapshot.diferenciaPct)} contra tu cierre anterior`;
   }
 
   function efficiencyResultText(snapshot = {}) {
     const tone = snapshot.status?.tone || "missing";
     if (tone === "missing") return snapshot.missingReason || "Faltan datos";
+    if (tone === "open") {
+      if (!(snapshot.facturacion > 0)) return "Aún no hay facturación en el período abierto.";
+      return "Se calculará cuando declares el KM final al pedir cierre de facturación.";
+    }
+    if (tone === "history") return "Este cierre quedará como referencia para comparar el próximo período.";
     if (tone === "mid") return "Resultado: Se mantiene";
     const label = tone === "good" ? "Mejoró" : "Bajó";
     return `Resultado: ${label} ${Math.abs(snapshot.diferenciaPct || 0).toFixed(1).replace(".", ",")}%`;
@@ -2427,7 +2450,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     const eficienciaPorKm = hasCurrent ? facturacion / kmRecorridos : 0;
     const reference = ownEfficiencyReferenceForDriver(uid, state.closures, beforeMs);
     const diferenciaPct = hasCurrent && reference.value > 0 ? ((eficienciaPorKm - reference.value) / reference.value) * 100 : NaN;
-    const status = efficiencyStatusFromOwn({ hasCurrent, reference:reference.value, deltaPct:diferenciaPct });
+    const status = efficiencyStatusFromOwn({ hasCurrent, reference:reference.value, deltaPct:diferenciaPct, facturacion, kmInicial, kmActual, kmRecorridos });
     return {
       kmActual:Number(kmActual || 0),
       lastKnownKm:Number(kmActual || 0),
