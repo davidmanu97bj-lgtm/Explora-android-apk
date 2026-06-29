@@ -5,7 +5,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 (() => {
   "use strict";
 
-  const VERSION = "explora-pago-home-v37-km-historial-cierres";
+  const VERSION = "explora-pago-home-v38-promedio-propio-5-cierres";
   const AR_TZ = "America/Argentina/Cordoba";
   const $ = id => document.getElementById(id);
   const state = {
@@ -1263,8 +1263,25 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       .map(row => ({ row, value:ownEfficiencyValueFromClosure(row) }))
       .filter(item => item.value > 0)
       .sort((a,b)=>closureCutMs(b.row)-closureCutMs(a.row) || rowMs(b.row)-rowMs(a.row));
-    if (!valid.length) return { value:0, count:0, mode:"none" };
-    return { value:valid[0].value, count:1, mode:"ultimo_cierre" };
+    const lastFive = valid.slice(0, 5);
+    if (!lastFive.length) return { value:0, count:0, mode:"none" };
+    const total = lastFive.reduce((sum, item) => sum + Number(item.value || 0), 0);
+    return { value:total / lastFive.length, count:lastFive.length, mode:"promedio_ultimos_5" };
+  }
+
+  function efficiencyToneFromDelta(deltaPct = NaN, hasReference = false) {
+    if (!hasReference || !Number.isFinite(Number(deltaPct))) return { tone:"mid", label:"Base", level:"Primer cierre guardado" };
+    if (deltaPct >= -5) return { tone:"good", label:"Mejoró", level:"Igual o mejor que su promedio propio" };
+    if (deltaPct >= -15) return { tone:"mid", label:"Normal", level:"Leve baja contra su promedio propio" };
+    if (deltaPct >= -30) return { tone:"bad", label:"Bajó", level:"Por debajo de su promedio propio" };
+    return { tone:"alert", label:"Alerta", level:"Muy por debajo de su promedio propio" };
+  }
+
+  function efficiencyToneCss(tone = "mid") {
+    if (tone === "good") return "efficiency-good";
+    if (tone === "bad") return "efficiency-bad";
+    if (tone === "alert") return "efficiency-alert";
+    return "efficiency-mid";
   }
 
   function billingAmountFromClosure(row = {}) {
@@ -1293,37 +1310,62 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 
   function normalizeStoredEfficiencyHistory(profile = {}) {
     const raw = Array.isArray(profile?.efficiencyLast5Closures) ? profile.efficiencyLast5Closures : [];
-    return raw.map((item, index) => {
+    const sorted = raw.map((item, index) => {
       const cutMs = Number(item.cutMs || item.fechaMs || item.dateMs || 0) || Date.now() + index;
       const kmRecorridos = number(item.kmRecorridos || item.km || item.kilometros || 0);
       const facturacion = moneyNumber(item.facturacion || item.total || item.monto || 0);
       const perKm = moneyNumber(item.perKm || item.eficienciaPorKm || 0) || (facturacion > 0 && kmRecorridos > 0 ? facturacion / kmRecorridos : 0);
-      const tone = safe(item.tone || item.estadoColor || item.color || "mid");
       return {
         id:safe(item.id || `stored_${cutMs}_${index}`),
         cutMs,
         dateLabel:safe(item.dateLabel || item.fecha || dateShort(cutMs)),
         kmRecorridos,
         facturacion,
-        perKm,
-        tone:/bad|rojo|baj/.test(tone) ? "bad" : /good|verde|mejor/.test(tone) ? "good" : "mid",
-        label:safe(item.label || item.resultado || "Cierre guardado"),
-        deltaPct:Number.isFinite(Number(item.deltaPct)) ? Number(item.deltaPct) : NaN
+        perKm
       };
     }).filter(item => item.kmRecorridos > 0 && item.facturacion > 0 && item.perKm > 0)
-      .sort((a,b)=>Number(a.cutMs || 0)-Number(b.cutMs || 0))
-      .slice(-5);
+      .sort((a,b)=>Number(a.cutMs || 0)-Number(b.cutMs || 0));
+    const previousEntries = [];
+    return sorted.map(item => {
+      const referenceEntries = previousEntries.slice(-5);
+      const referenceAvg = referenceEntries.length
+        ? referenceEntries.reduce((sum, entry) => sum + Number(entry.perKm || 0), 0) / referenceEntries.length
+        : 0;
+      const deltaPct = referenceAvg > 0 ? ((item.perKm - referenceAvg) / referenceAvg) * 100 : NaN;
+      const result = efficiencyToneFromDelta(deltaPct, referenceAvg > 0);
+      previousEntries.push(item);
+      return {
+        ...item,
+        referenceAvg,
+        referenceCount:referenceEntries.length,
+        tone:result.tone,
+        label:result.label,
+        level:result.level,
+        deltaPct
+      };
+    }).slice(-5);
   }
 
   function efficiencyHistoryForDriver(uid = getDriverUid(), closures = state.closures, profile = driverProfileForEfficiency(uid)) {
     const raw = efficiencyRawHistoryRowsForDriver(uid, closures);
-    let previous = null;
+    const previousEntries = [];
     const computed = raw.map(item => {
-      const deltaPct = previous?.perKm > 0 ? ((item.perKm - previous.perKm) / previous.perKm) * 100 : NaN;
-      const tone = !previous ? "good" : item.perKm >= previous.perKm ? "good" : "bad";
-      const label = !previous ? "Primer cierre" : tone === "good" ? "Mejoró" : "Bajó";
-      const entry = { ...item, tone, label, deltaPct };
-      previous = item;
+      const referenceEntries = previousEntries.slice(-5);
+      const referenceAvg = referenceEntries.length
+        ? referenceEntries.reduce((sum, entry) => sum + Number(entry.perKm || 0), 0) / referenceEntries.length
+        : 0;
+      const deltaPct = referenceAvg > 0 ? ((item.perKm - referenceAvg) / referenceAvg) * 100 : NaN;
+      const result = efficiencyToneFromDelta(deltaPct, referenceAvg > 0);
+      const entry = {
+        ...item,
+        tone:result.tone,
+        label:result.label,
+        level:result.level,
+        deltaPct,
+        referenceAvg,
+        referenceCount:referenceEntries.length
+      };
+      previousEntries.push(item);
       return entry;
     });
     if (computed.length) return computed.slice(-5);
@@ -1338,6 +1380,8 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       kmRecorridos:Number(item.kmRecorridos || 0),
       facturacion:Number(item.facturacion || 0),
       perKm:Number(item.perKm || 0),
+      referenceAvg:Number(item.referenceAvg || 0),
+      referenceCount:Number(item.referenceCount || 0),
       tone:safe(item.tone || "mid"),
       label:safe(item.label || "Cierre"),
       deltaPct:Number.isFinite(Number(item.deltaPct)) ? Number(item.deltaPct) : null
@@ -1346,16 +1390,17 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 
   function efficiencyStatusFromOwn({ hasCurrent = false, reference = 0, deltaPct = NaN } = {}) {
     if (!hasCurrent || !(reference > 0) || !Number.isFinite(deltaPct)) return { label:"Faltan datos", level:"Pendiente de datos", css:"efficiency-missing", tone:"missing" };
-    if (deltaPct > 5) return { label:"Mejoró", level:"Eficiencia alta", css:"efficiency-good", tone:"good" };
-    if (deltaPct < -5) return { label:"Bajó", level:"Eficiencia baja", css:"efficiency-bad", tone:"bad" };
-    return { label:"Se mantiene", level:"Eficiencia estable", css:"efficiency-mid", tone:"mid" };
+    const result = efficiencyToneFromDelta(deltaPct, true);
+    return { label:result.label, level:result.level, css:efficiencyToneCss(result.tone), tone:result.tone };
   }
 
   function efficiencyStatusFromHistory({ history = [], kmSeedLoaded = false } = {}) {
     const latest = history[history.length - 1] || null;
     if (latest) {
-      if (latest.tone === "bad") return { label:"Bajó", level:"Último cierre por debajo del anterior", css:"efficiency-bad", tone:"bad" };
-      return { label:latest.label === "Primer cierre" ? "Primer cierre" : "Mejoró", level:"Último cierre igual o mejor", css:"efficiency-good", tone:"good" };
+      const tone = safe(latest.tone || "mid");
+      const label = latest.label === "Base" ? "Primer cierre" : safe(latest.label || "Eficiencia");
+      const level = latest.level || (latest.referenceAvg > 0 ? "Contra promedio propio" : "Primer cierre guardado");
+      return { label, level, css:efficiencyToneCss(tone), tone };
     }
     if (kmSeedLoaded) return { label:"Sin cierres", level:"KM inicial cargado", css:"efficiency-mid", tone:"mid" };
     return { label:"Cargar KM inicial", level:"Chofer nuevo o sin KM", css:"efficiency-missing", tone:"missing" };
@@ -1366,7 +1411,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     if (kmActual > 0 && kmActual < kmInicial) return "El KM actual no puede ser menor al KM inicial.";
     if (!(facturacion > 0)) return "Falta facturación cargada.";
     if (!(kmActual > 0) || !(kmRecorridos > 0)) return "KM inicial cargado. El KM final se declara al pedir cierre de facturación.";
-    if (!(reference > 0)) return "Falta un cierre anterior válido para comparar.";
+    if (!(reference > 0)) return "Falta historial propio suficiente para comparar.";
     return "";
   }
 
@@ -1377,7 +1422,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     const kmSeedLoaded = hasKmInitialSeedForDriver(targetUid, driverClosures, profile);
     const history = efficiencyHistoryForDriver(targetUid, driverClosures, profile);
     const latest = history[history.length - 1] || null;
-    const previous = history.length > 1 ? history[history.length - 2] : null;
+    const reference = latest?.referenceAvg > 0 ? latest.referenceAvg : 0;
     const status = efficiencyStatusFromHistory({ history, kmSeedLoaded });
     return {
       uid:targetUid,
@@ -1386,11 +1431,11 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       kmSeedLoaded,
       history,
       latestEfficiencyEntry:latest,
-      previousEfficiencyEntry:previous,
+      previousEfficiencyEntry:null,
       facturacion:latest?.facturacion || 0,
       kmRecorridos:latest?.kmRecorridos || 0,
       eficiencia:latest?.perKm || 0,
-      referenciaPropia:previous?.perKm || 0,
+      referenciaPropia:reference,
       diferenciaPct:Number.isFinite(Number(latest?.deltaPct)) ? Number(latest.deltaPct) : NaN,
       missingReason:kmSeedLoaded ? "" : "Falta cargar KM inicial.",
       missingReasons:kmSeedLoaded ? [] : ["Falta cargar KM inicial."],
@@ -1470,7 +1515,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 
   function efficiencyHeadlineDelta(snapshot = {}) {
     if (snapshot.status?.tone === "missing" || !(snapshot.referenciaPropia > 0)) return "";
-    return `${signedPercent(snapshot.diferenciaPct)} contra tu cierre anterior`;
+    return `${signedPercent(snapshot.diferenciaPct)} contra tu promedio propio`;
   }
 
   function efficiencyResultText(snapshot = {}) {
@@ -1531,9 +1576,12 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     }
     const ordered = [...history].sort((a,b)=>Number(b.cutMs || 0)-Number(a.cutMs || 0) || safe(b.id).localeCompare(safe(a.id)));
     return `<div class="pay-efficiency-history" aria-label="Últimos cierres de eficiencia">${ordered.map(item => {
-      const tone = item.tone === "bad" ? "bad" : "good";
-      const resultText = item.label === "Primer cierre" ? "Base" : item.label;
-      const delta = Number.isFinite(Number(item.deltaPct)) ? `<small>${esc(signedPercent(item.deltaPct))} vs cierre anterior</small>` : `<small>Primer cierre guardado</small>`;
+      const tone = ["good", "mid", "bad", "alert"].includes(item.tone) ? item.tone : "mid";
+      const resultText = item.label === "Base" || item.label === "Primer cierre" ? "Base" : item.label;
+      const referenceCount = Number(item.referenceCount || 0);
+      const delta = Number.isFinite(Number(item.deltaPct)) && item.referenceAvg > 0
+        ? `<small>${esc(efficiencyMoneyPerKm(item.perKm))} · ${esc(signedPercent(item.deltaPct))} vs promedio propio${referenceCount ? ` (${referenceCount})` : ""}</small>`
+        : `<small>${esc(efficiencyMoneyPerKm(item.perKm))} · primer cierre guardado</small>`;
       return `<article class="pay-efficiency-history-item is-${tone}">
         <div class="pay-efficiency-history-main">
           <strong>Cierre ${esc(item.dateLabel || dateShort(item.cutMs))}</strong>
@@ -1559,11 +1607,11 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     const historyHtml = snapshot.kmSeedLoaded ? renderEfficiencyHistoryList(snapshot.history || []) : "";
     const driverLabel = (isAdmin() ? (state.selectedDriverName || snapshot.name || "chofer") : (snapshot.name || displayName())).toUpperCase();
     const latest = snapshot.latestEfficiencyEntry;
-    const deltaLine = latest && Number.isFinite(Number(latest.deltaPct)) ? `<span class="pay-efficiency-delta">${esc(signedPercent(latest.deltaPct))} contra el cierre anterior</span>` : "";
+    const deltaLine = latest && Number.isFinite(Number(latest.deltaPct)) && latest.referenceAvg > 0 ? `<span class="pay-efficiency-delta">${esc(signedPercent(latest.deltaPct))} contra el promedio propio de ${esc(latest.referenceCount || 0)} cierre${Number(latest.referenceCount || 0) === 1 ? "" : "s"}</span>` : "";
     const kmReadonlyNote = snapshot.kmSeedLoaded
       ? `<div class="pay-efficiency-note">KM inicial actual: ${esc(Math.round(snapshot.kmInicial || 0))} km. El KM final se carga únicamente al pedir cierre de facturación.</div>`
       : "";
-    const warning = tone === "bad" ? `<div class="pay-efficiency-warning">El último cierre quedó por debajo del cierre anterior. Revisá si faltó cargar algún cobro o si hubo más kilómetros recorridos.</div>` : "";
+    const warning = tone === "bad" || tone === "alert" ? `<div class="pay-efficiency-warning">El último cierre quedó por debajo del promedio propio. Revisá si faltó cargar algún cobro o si hubo más kilómetros recorridos.</div>` : "";
     body.innerHTML = `
       <div class="pay-efficiency-status ${esc(snapshot.status?.css || "efficiency-missing")}">
         <span class="pay-efficiency-status-symbol"><span class="pay-efficiency-status-icon"></span><span class="pay-efficiency-modal-asterisk" aria-hidden="true">*</span></span>
@@ -1577,7 +1625,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       ${kmReadonlyNote}
       ${initialKmForm}
       ${historyHtml}
-      <div class="pay-efficiency-disclaimer">Se guardan los últimos 5 cierres de facturación. Cada cierre usa el KM final declarado y ese KM pasa automáticamente a ser el KM inicial del siguiente período.</div>
+      <div class="pay-efficiency-disclaimer">Se muestran los últimos 5 cierres de facturación. Cada cierre nuevo se compara contra el promedio propio de hasta 5 cierres anteriores. El KM final declarado pasa automáticamente a ser el KM inicial del siguiente período.</div>
       ${warning}${loading}`;
   }
 
@@ -2539,6 +2587,11 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       eficienciaReferenciaPropia:Number(reference.value || 0),
       eficienciaReferenciaConteo:Number(reference.count || 0),
       eficienciaReferenciaModo:reference.mode || "none",
+      efficiencyReferenceAverage:Number(reference.value || 0),
+      efficiencyReferenceCount:Number(reference.count || 0),
+      efficiencyReferenceMode:reference.mode || "none",
+      efficiencyTone:status.tone || "missing",
+      efficiencyLabel:status.label || "Faltan datos",
       eficienciaPendienteDatos:!!pending || !hasCurrent,
       eficienciaUpdatedAt:serverTimestamp(),
       eficienciaUpdatedAtMs:Date.now(),
