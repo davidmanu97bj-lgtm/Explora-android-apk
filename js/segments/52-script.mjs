@@ -5,7 +5,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 (() => {
   "use strict";
 
-  const VERSION = "explora-pago-home-v5-more-visible-fix";
+  const VERSION = "explora-pago-home-v6-closure-notifications";
   const AR_TZ = "America/Argentina/Cordoba";
   const $ = id => document.getElementById(id);
   const state = {
@@ -172,7 +172,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
           </div>
           <div class="pay-icons">
             <button class="pay-icon-btn" id="paySearchBtn" type="button" aria-label="Buscar"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg></button>
-            <button class="pay-icon-btn" id="payBellBtn" type="button" aria-label="Cierres pendientes"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 21h4"></path></svg></button>
+            <button class="pay-icon-btn pay-bell-btn" id="payBellBtn" type="button" aria-label="Notificaciones de cierres"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 21h4"></path></svg><span class="pay-bell-badge" id="payBellBadge" hidden>0</span></button>
           </div>
         </header>
         <nav class="pay-tabs" aria-label="Resumen de caja Explora" role="tablist">
@@ -229,6 +229,16 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
           </button>
         </section>
       </section>
+      <section class="explora-pay-notifications" id="payNotificationsScreen" hidden aria-label="Notificaciones Explora">
+        <header class="pay-notification-head">
+          <button class="pay-notification-back" id="payNotificationsBack" type="button" aria-label="Volver al inicio"><svg viewBox="0 0 24 24"><path d="M15 6 9 12l6 6"></path></svg></button>
+          <button class="pay-notification-settings" id="payNotificationsSettings" type="button" aria-label="Configuración"><svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"></path><path d="M19.4 15a1.6 1.6 0 0 0 .32 1.76l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.6 1.6 0 0 0-1.76-.32 1.6 1.6 0 0 0-.97 1.47V21a2 2 0 1 1-4 0v-.09a1.6 1.6 0 0 0-1.03-1.47 1.6 1.6 0 0 0-1.76.32l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.6 1.6 0 0 0 4.6 15a1.6 1.6 0 0 0-1.47-.97H3a2 2 0 1 1 0-4h.09A1.6 1.6 0 0 0 4.56 9a1.6 1.6 0 0 0-.32-1.76l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.6 1.6 0 0 0 8.83 4.7 1.6 1.6 0 0 0 9.8 3.23V3a2 2 0 1 1 4 0v.09a1.6 1.6 0 0 0 .97 1.47 1.6 1.6 0 0 0 1.76-.32l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.6 1.6 0 0 0 19.4 9c.63.23 1.05.83 1.05 1.5V12c0 .67-.42 1.27-1.05 1.5Z"></path></svg></button>
+        </header>
+        <h1 class="pay-notification-title">Notificaciones</h1>
+        <div class="pay-notification-list" id="payNotificationList">
+          <div class="pay-notification-empty">No tenés cierres pendientes.</div>
+        </div>
+      </section>
       <button class="pay-floating-spark" id="payQuickClosureBtn" type="button" aria-label="Pedir cierre" hidden><svg viewBox="0 0 24 24"><path d="M12 2 14.8 9.2 22 12l-7.2 2.8L12 22l-2.8-7.2L2 12l7.2-2.8Z"></path></svg></button>
       <nav class="pay-bottom-nav" id="payBottomNav" aria-label="Navegación principal Explora">
         <button class="pay-nav-btn is-active" data-pay-nav="inicio" type="button"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 10v10h14V10"></path></svg><span>Inicio</span></button>
@@ -284,10 +294,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       const pending = pendingClosureFor(getDriverUid(), state.tab);
       openClosureModal(pending && !isAdmin() ? "confirm" : "admin-review", pending, state.tab);
     });
-    $("payBellBtn")?.addEventListener("click", () => {
-      const pending = pendingClosureFor(getDriverUid(), state.tab) || pendingClosureFor(getDriverUid(), "gastos") || pendingClosureFor(getDriverUid(), "explora") || pendingClosureFor(getDriverUid(), "chofer");
-      openClosureModal(pending && !isAdmin() ? "confirm" : "request", pending, closureKindOf(pending) || state.tab);
-    });
+    $("payBellBtn")?.addEventListener("click", () => showPayView("notificaciones"));
     $("payCardEnterBtn")?.addEventListener("click", () => { if (state.tab === "gastos") runExistingAction("cargar-gastos"); else if (state.tab === "chofer" || state.tab === "explora") openClosureModal(state.pendingClosure && !isAdmin() ? "confirm" : "request", state.pendingClosure, state.tab); else runExistingAction("nuevo-servicio"); });
     $("payRefreshBtn")?.addEventListener("click", () => startRealtime("manual-refresh"));
     $("payClosureClose")?.addEventListener("click", closeClosureModal);
@@ -302,6 +309,13 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     });
     document.querySelector('[data-pay-nav="mas"]')?.addEventListener("click", () => showPayView("mas"));
     $("payMoreBack")?.addEventListener("click", () => showPayView("inicio"));
+    $("payNotificationsBack")?.addEventListener("click", () => showPayView("inicio"));
+    $("payNotificationsSettings")?.addEventListener("click", () => showPayView("mas"));
+    $("payNotificationList")?.addEventListener("click", event => {
+      const button = event.target.closest("[data-pay-notification-closure]");
+      if (!button) return;
+      openClosureFromNotification(button.dataset.payNotificationClosure);
+    });
     $("payMoreLogoutBtn")?.addEventListener("click", logoutFromMore);
     $("payMoreList")?.addEventListener("click", event => {
       const button = event.target.closest("[data-pay-more-action]");
@@ -325,27 +339,35 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
   }
 
   function showPayView(view = "inicio") {
-    const target = view === "mas" ? "mas" : "inicio";
+    const target = view === "mas" ? "mas" : view === "notificaciones" ? "notificaciones" : "inicio";
     state.view = target;
     const dashboard = $("exploraPagoDashboard");
     const more = $("payMoreScreen");
+    const notifications = $("payNotificationsScreen");
     const isMore = target === "mas";
+    const isNotifications = target === "notificaciones";
+    const hideHome = isMore || isNotifications;
     if (dashboard) {
-      dashboard.hidden = isMore;
-      dashboard.style.display = isMore ? "none" : "";
-      dashboard.setAttribute("aria-hidden", isMore ? "true" : "false");
+      dashboard.hidden = hideHome;
+      dashboard.style.display = hideHome ? "none" : "";
+      dashboard.setAttribute("aria-hidden", hideHome ? "true" : "false");
     }
     if (more) {
       more.hidden = !isMore;
       more.style.display = isMore ? "block" : "none";
       more.setAttribute("aria-hidden", isMore ? "false" : "true");
     }
-    document.body.classList.toggle("pay-more-open", isMore);
-    setBottomNavActive(target);
-    if (isMore) {
-      renderMoreScreen();
-      window.scrollTo({ top: 0, behavior: "auto" });
+    if (notifications) {
+      notifications.hidden = !isNotifications;
+      notifications.style.display = isNotifications ? "block" : "none";
+      notifications.setAttribute("aria-hidden", isNotifications ? "false" : "true");
     }
+    document.body.classList.toggle("pay-more-open", isMore);
+    document.body.classList.toggle("pay-notifications-open", isNotifications);
+    setBottomNavActive(isNotifications ? "" : target);
+    if (isMore) renderMoreScreen();
+    if (isNotifications) renderNotificationsScreen();
+    if (isMore || isNotifications) window.scrollTo({ top: 0, behavior: "auto" });
   }
 
   function moreItems() {
@@ -524,6 +546,85 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     return pending[0] || null;
   }
 
+  function pendingClosureRows(uid = getDriverUid()) {
+    const rows = state.closures
+      .filter(row => safe(row.closureMode || row.periodType) === "on_demand")
+      .filter(row => !/confirmed|completed|closed|cerrado|al_dia|al día|pagado|cancelled|canceled|anulado|rechazado/i.test(safe(row.status || row.estado)))
+      .filter(row => {
+        if (isAdmin()) return true;
+        const rowUids = [row.driverUid, row.choferUid, row.uid, row.ownerUid].map(safe);
+        return !uid || rowUids.includes(uid);
+      })
+      .sort((a,b)=>rowMs(b)-rowMs(a));
+    const unique = new Map();
+    for (const row of rows) unique.set(safe(row.id || `${closureKindOf(row)}_${rowMs(row)}`), row);
+    return Array.from(unique.values());
+  }
+
+  function closureResultText(closure = {}) {
+    const due = number(closure.amountDueFromDriver || closure.amountFromDriver || 0);
+    const toDriver = number(closure.amountDueToDriver || closure.amountToDriver || 0);
+    if (due > 0) return `Chofer paga a Explora ${currency(due)}`;
+    if (toDriver > 0) return activeClosureKind(closureKindOf(closure)) === "gastos" ? `Explora reintegra al chofer ${currency(toDriver)}` : `Explora paga al chofer ${currency(toDriver)}`;
+    return "Cierre equilibrado";
+  }
+
+  function closureTimeLabel(row = {}) {
+    const at = rowMs(row) || Date.now();
+    const now = Date.now();
+    const sameDay = new Intl.DateTimeFormat("es-AR", { timeZone:AR_TZ, day:"2-digit", month:"2-digit", year:"numeric" }).format(at) === new Intl.DateTimeFormat("es-AR", { timeZone:AR_TZ, day:"2-digit", month:"2-digit", year:"numeric" }).format(now);
+    if (sameDay) return new Intl.DateTimeFormat("es-AR", { timeZone:AR_TZ, hour:"2-digit", minute:"2-digit" }).format(at);
+    return new Intl.DateTimeFormat("es-AR", { timeZone:AR_TZ, day:"2-digit", month:"2-digit" }).format(at);
+  }
+
+  function renderBellBadge() {
+    const badge = $("payBellBadge");
+    if (!badge) return;
+    const count = pendingClosureRows(getDriverUid()).length;
+    badge.hidden = count < 1;
+    badge.textContent = count > 9 ? "9+" : String(count);
+    const bell = $("payBellBtn");
+    if (bell) bell.setAttribute("aria-label", count ? `Notificaciones de cierres: ${count} pendiente${count === 1 ? "" : "s"}` : "Notificaciones de cierres");
+  }
+
+  function renderNotificationsScreen() {
+    const list = $("payNotificationList");
+    if (!list) return;
+    const rows = pendingClosureRows(getDriverUid());
+    if (!rows.length) {
+      list.innerHTML = `<div class="pay-notification-empty">No tenés cierres pendientes.</div>`;
+      return;
+    }
+    list.innerHTML = rows.map(row => {
+      const kind = closureKindOf(row) || "gastos";
+      const title = isAdmin() && safe(row.requestedByRole) !== "admin" ? "Chofer pidió el cierre" : "Explora pidió el cierre";
+      const subtitle = `${closureTitle(kind)} · ${closureResultText(row)}`;
+      const status = dueNeedsReceipt(row) ? "Cargar comprobante" : "Ver detalle";
+      return `<button class="pay-notification-row" data-pay-notification-closure="${esc(row.id)}" type="button">
+        <span class="pay-notification-icon">${notificationIcon(kind)}</span>
+        <span class="pay-notification-copy"><strong>${esc(title)}</strong><small>Resolvé tu situación</small><em>${esc(subtitle)}</em></span>
+        <span class="pay-notification-side"><time>${esc(closureTimeLabel(row))}</time><b>${esc(status)}</b></span>
+      </button>`;
+    }).join("");
+  }
+
+  function notificationIcon(kind = "gastos") {
+    if (activeClosureKind(kind) === "gastos") return `<svg viewBox="0 0 24 24"><path d="M4 7.5h14.5A1.5 1.5 0 0 1 20 9v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11"></path><path d="M16 12h5v4h-5a2 2 0 0 1 0-4Z"></path></svg>`;
+    return `<svg viewBox="0 0 24 24"><path d="M7 3h10v18l-2-1-2 1-2-1-2 1-2-1Z"></path><path d="M9 8h6M9 12h6M9 16h4"></path></svg>`;
+  }
+
+  function dueNeedsReceipt(closure = {}) {
+    return number(closure.amountDueFromDriver || 0) > 0 && !closure.receiptUrl;
+  }
+
+  function openClosureFromNotification(id) {
+    const closure = state.closures.find(row => safe(row.id) === safe(id));
+    if (!closure) return;
+    showPayView("inicio");
+    const kind = closureKindOf(closure) || state.tab;
+    openClosureModal(isAdmin() ? "admin-review" : "confirm", closure, kind);
+  }
+
   function computeSummary({ records = state.records, expenses = state.expenses, closures = state.closures } = {}) {
     // Nuevo modo: Chofer y Explora son dos vistas del mismo cierre de facturación.
     // El corte de cualquiera de los dos corta toda la facturación: efectivo + digital.
@@ -676,8 +777,11 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     renderMainCard(summary);
     renderClosureStatus(summary);
     renderActivities(summary);
+    renderBellBadge();
     if (state.view === "mas") {
       showPayView("mas");
+    } else if (state.view === "notificaciones") {
+      showPayView("notificaciones");
     } else {
       setBottomNavActive("inicio");
     }
@@ -835,6 +939,35 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     select.innerHTML = options.join("");
   }
 
+  function closureDetailSummary(closure = {}, kind = "gastos", adminView = false) {
+    const due = number(closure.amountDueFromDriver || 0);
+    const toDriver = number(closure.amountDueToDriver || 0);
+    const gross = number(closure.gross || 0);
+    const expenseTotal = number(closure.expenseTotal || 0);
+    const cash = number(closure.cashInDriver || 0);
+    const digital = number(closure.exploraCash || closure.nonCashInExplora || 0);
+    const share = number(closure.billingShareEach || 0);
+    const status = safe(closure.statusLabel || closure.estado || closure.status || "pendiente");
+    const cut = closureTimeLabel(closure);
+    const driver = safe(closure.driverName || closure.choferNombre || closure.nombreChofer || "Chofer");
+    const kindLabel = closureTitle(kind);
+    const result = due > 0 ? "Chofer paga a Explora" : toDriver > 0 ? (activeClosureKind(kind) === "gastos" ? "Explora reintegra al chofer" : "Explora paga al chofer") : "Cierre equilibrado";
+    const amount = Math.max(due, toDriver);
+    const base = [
+      ["Motivo", "Explora pidió el cierre"],
+      ["Chofer", driver],
+      ["Tipo de cierre", kindLabel],
+      ["Corte", cut],
+      ["Estado", status],
+      [result, currency(amount)]
+    ];
+    const detail = activeClosureKind(kind) === "gastos"
+      ? [["Gastos incluidos", currency(expenseTotal)], ["Parte chofer 50%", currency(expenseTotal * .5)], ["Parte Explora 50%", currency(toDriver || expenseTotal * .5)]]
+      : [["Efectivo chofer", currency(cash)], ["Digital Explora", currency(digital)], ["Total facturado", currency(gross)], ["Parte de cada uno", currency(share)]];
+    const receipt = closure.receiptUrl ? [["Comprobante", "cargado"]] : [];
+    return base.concat(detail, receipt).map(([label,value]) => `<article><span>${esc(label)}</span><strong>${esc(value)}</strong></article>`).join("") + (due > 0 && !closure.receiptUrl && !adminView ? `<div class="pay-closure-alert">Para quedar al día, cargá el comprobante de transferencia.</div>` : "");
+  }
+
   function renderClosureModal() {
     renderDriverSelect();
     const title = $("payClosureTitle"), subtitle = $("payClosureSubtitle"), summary = $("payClosureSummary"), fileField = $("payClosureFileField"), submit = $("payClosureSubmit"), cancel = $("payClosureCancel");
@@ -847,11 +980,11 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     submit.className = "pay-closure-primary";
     if (state.modalMode === "confirm" && closure) {
       const due = number(closure.amountDueFromDriver || 0), toDriver = number(closure.amountDueToDriver || 0);
-      title.textContent = `Confirmar ${closureTitle(kind).toLowerCase()}`;
-      subtitle.textContent = due > 0 ? "Transferí a Explora y cargá la foto del comprobante." : "El cierre no requiere transferencia del chofer.";
+      title.textContent = "Explora pidió el cierre";
+      subtitle.textContent = due > 0 ? "Resolvé tu situación: transferí a Explora y cargá el comprobante." : "Resolvé tu situación: revisá el detalle del cierre solicitado.";
       fileField.hidden = !(due > 0);
-      submit.textContent = due > 0 ? "Subir comprobante" : "Confirmar cierre";
-      summary.innerHTML = `<article><span>Tipo de cierre</span><strong>${esc(closureTitle(kind))}</strong></article><article><span>Chofer debe rendir</span><strong>${currency(due)}</strong></article><article><span>Explora debe pagar</span><strong>${currency(toDriver)}</strong></article>`;
+      submit.textContent = due > 0 ? "Subir comprobante" : "Confirmar visto";
+      summary.innerHTML = closureDetailSummary(closure, kind);
       return;
     }
     if (state.modalMode === "admin-review" && closure && isAdmin()) {
@@ -859,7 +992,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       title.textContent = `Revisar ${closureTitle(kind).toLowerCase()}`;
       subtitle.textContent = "Confirmá el cierre cuando el comprobante esté correcto o cuando el pago de Explora corresponda.";
       submit.textContent = "Confirmar recibido";
-      summary.innerHTML = `<article><span>Tipo</span><strong>${esc(closureTitle(kind))}</strong></article><article><span>Estado</span><strong>${esc(closure.status || "pendiente")}</strong></article><article><span>Chofer debe rendir</span><strong>${currency(due)}</strong></article><article><span>Explora debe pagar</span><strong>${currency(toDriver)}</strong></article>${closure.receiptUrl ? `<article><span>Comprobante</span><strong>cargado</strong></article>` : ""}`;
+      summary.innerHTML = closureDetailSummary(closure, kind, true);
       return;
     }
     title.textContent = isAdmin() ? `Pedir ${closureTitle(kind).toLowerCase()} a un chofer` : `Pedir ${closureTitle(kind).toLowerCase()}`;
