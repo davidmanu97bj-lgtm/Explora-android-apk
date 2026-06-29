@@ -5,7 +5,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 (() => {
   "use strict";
 
-  const VERSION = "explora-pago-home-v17-closure-button-proof-clean";
+  const VERSION = "explora-pago-home-v18-closure-activity-open-closed";
   const AR_TZ = "America/Argentina/Cordoba";
   const $ = id => document.getElementById(id);
   const state = {
@@ -700,6 +700,16 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     return /confirmed|confirmado|completed|closed|cerrado|al_dia|al día|pagado/.test(status);
   }
 
+  function closureActivityStateText(closure = {}) {
+    return closureIsCompleted(closure) ? "CERRADO" : "ABIERTO";
+  }
+
+  function closureActivityMeta(closure = {}) {
+    const stateText = closureActivityStateText(closure);
+    const statusText = closureStatusText(closure);
+    return stateText === "CERRADO" ? "CERRADO · Cierre completo" : `ABIERTO · ${statusText}`;
+  }
+
   function closurePayerClass(closure = {}) {
     const due = number(closure.amountDueFromDriver || closure.amountFromDriver || 0);
     const toDriver = number(closure.amountDueToDriver || closure.amountToDriver || 0);
@@ -1018,13 +1028,14 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       });
     }
 
-    for (const row of state.closures.filter(r => safe(r.closureMode || r.periodType) === "on_demand").filter(closureIsCompleted)) {
+    for (const row of state.closures.filter(r => safe(r.closureMode || r.periodType) === "on_demand")) {
       const at = rowMs(row);
       const closureKind = closureKindOf(row);
+      const stateText = closureActivityStateText(row);
       rows.push({
-        at, type:"closure", closureId:safe(row.id || row.closureId), tone:closurePayerClass(row), title:`${dateShort(at)} · ${closureTitle(closureKind)}`,
-        meta:closureStatusText(row),
-        detail:`A rendir: ${currency(row.amountDueFromDriver || 0)} · A cobrar: ${currency(row.amountDueToDriver || 0)}`,
+        at, type:"closure", closureId:safe(row.id || row.closureId), tone:closurePayerClass(row), title:`${dateShort(at)} · ${closureTitle(closureKind)} · ${stateText}`,
+        meta:closureActivityMeta(row),
+        detail:`${closureStatusText(row)} · A rendir: ${currency(row.amountDueFromDriver || 0)} · A cobrar: ${currency(row.amountDueToDriver || 0)}`,
         amount:0
       });
     }
