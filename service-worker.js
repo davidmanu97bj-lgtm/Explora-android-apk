@@ -1,7 +1,7 @@
-/* Compatibilidad validada: v2520-explora-new-closure-period */
+/* Compatibilidad validada: v2522-closure-request-no-upload-by-non-payer */
 /* EXPLORA PWA service worker · v2.4.99 */
 const CACHE_PREFIX = 'explora-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v2521-closure-activity-open-closed`;
+const CACHE_NAME = `${CACHE_PREFIX}v2522-closure-request-no-upload-by-non-payer`;
 const APP_SHELL = [
   './',
   './index.html',
@@ -26,8 +26,8 @@ const APP_SHELL = [
   './css/segments/49-style.css?v=2456-personal-record-server-authoritative',
   './css/segments/50-style.css?v=2458-admin-driver-production-safe',
   './css/segments/51-style.css?v=2484-weekly-mileage-modal-ux',
-  './css/segments/52-style.css?v=2516-proof-final-clean',
-  './js/segments/52-script.mjs?v=2516-proof-final-clean',
+  './css/segments/52-style.css?v=2522-no-request-upload',
+  './js/segments/52-script.mjs?v=2522-no-request-upload',
   './js/segments/49-script.mjs?v=2488-mileage-close-fast',
   './js/segments/49-mileage-model.mjs?v=2477-weekly-mileage-v15-admin-card-clickable',
   './js/segments/44-script.mjs?v=2456-personal-record-server-authoritative',
