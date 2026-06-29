@@ -1,16 +1,16 @@
-/* Compatibilidad validada: v3911-logo-real-header */
+/* Compatibilidad validada: v3920-billing-main-formal */
 /* EXPLORA PWA service worker · v2.5.1 */
 const CACHE_PREFIX = 'explora-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v3911-logo-real-header`;
+const CACHE_NAME = `${CACHE_PREFIX}v3920-billing-main-formal`;
 const APP_SHELL = [
   './',
   './index.html',
   './css/segments/46-style.css',
   './css/segments/47-style.css?v=2411-logo',
   './css/segments/48-style.css?v=2412-ranking-mobile',
-  './css/segments/07-style.css?v=250-receipt-guidance',
+  './css/segments/07-style.css?v=3920-billing-main-formal',
   './js/segments/09-script.js',
-  './js/segments/07-script.js?v=2487-billing-no-mileage-gate',
+  './js/segments/07-script.js?v=3920-billing-main-formal',
   './js/segments/13-script.mjs?v=248-payment-receipts-facturaste-gastaste-finance-nav-fix',
   './css/segments/32-style.css?v=2445-finance-nav-fix',
   './css/segments/38-style.css?v=2445-finance-nav-fix',
@@ -101,4 +101,4 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
-/* cache bump: v3911 logo real header */
+/* cache bump: v3920 billing main formal */
