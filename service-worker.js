@@ -1,7 +1,7 @@
 /* Compatibilidad validada: v2514-clean-notification-target */
 /* EXPLORA PWA service worker · v2.4.95 */
 const CACHE_PREFIX = 'explora-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v2514-clean-notification-target`;
+const CACHE_NAME = `${CACHE_PREFIX}v2515-proof-status-detail`;
 const APP_SHELL = [
   './',
   './index.html',
