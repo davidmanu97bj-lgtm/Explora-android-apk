@@ -5,7 +5,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 (() => {
   "use strict";
 
-  const VERSION = "explora-pago-home-v10-caja-chica-5";
+  const VERSION = "explora-pago-home-v11-caja-chica-neto-actividades";
   const AR_TZ = "America/Argentina/Cordoba";
   const $ = id => document.getElementById(id);
   const state = {
@@ -116,8 +116,8 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
   }
 
   function expensePayer(row = {}) {
-    const raw = safe(row.payerRole || row.pagadoPorRol || row.paidByRole || row.pagadoPor || row.paidBy || row.paymentSource || row.fuentePago || "driver").toLowerCase();
-    if (/explora|admin|empresa|david|uala|ualá|cuenta|tarjeta/.test(raw)) return "explora";
+    // En este modo operativo, los gastos abiertos se consideran cargados/pagados por el chofer.
+    // Explora no paga gastos por Ualá/cuenta temporalmente; solo reintegra su 50% en el cierre de gastos.
     return "driver";
   }
 
@@ -207,7 +207,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
         <section class="pay-main-card" aria-live="polite">
           <div class="pay-main-row">
             <div class="pay-amount-wrap">
-              <div class="pay-amount-line"><strong class="pay-amount" id="payMainAmount">—</strong><button class="pay-eye" type="button" aria-label="Ocultar o mostrar monto"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"></path><circle cx="12" cy="12" r="3"></circle></svg></button></div>
+              <div class="pay-amount-line"><strong class="pay-amount" id="payMainAmount">—</strong></div>
               <span class="pay-subtitle" id="payMainSubtitle">Cargando caja operativa…</span>
             </div>
             <button class="pay-enter" id="payCardEnterBtn" type="button">Entrar <svg viewBox="0 0 24 24"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg></button>
@@ -724,18 +724,26 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     const cashboxExploraRecords = cashboxRecords.filter(row => methodOf(row) !== "cash");
     const filteredExpenses = expenses.filter(row => rowMs(row) > resetExpensesMs).sort((a,b)=>rowMs(b)-rowMs(a));
 
-    let cashInDriver = 0, nonCashInExplora = 0;
+    const cashboxRate = .05;
+    let cashGrossInDriver = 0, nonCashGrossInExplora = 0;
     for (const row of cashRecords) {
       const amount = amountOf(row);
-      if (amount > 0) cashInDriver += amount;
+      if (amount > 0) cashGrossInDriver += amount;
     }
     for (const row of exploraRecords) {
       const amount = amountOf(row);
-      if (amount > 0) nonCashInExplora += amount;
+      if (amount > 0) nonCashGrossInExplora += amount;
     }
 
+    // Facturación de Chofer/Explora usa NETO: cobro bruto menos caja chica 5%.
+    // Caja chica se cierra aparte, para que no aparente más dinero del real en facturación.
+    const cashboxFromBillingCash = cashGrossInDriver * cashboxRate;
+    const cashboxFromBillingExplora = nonCashGrossInExplora * cashboxRate;
+    const cashInDriver = cashGrossInDriver - cashboxFromBillingCash;
+    const nonCashInExplora = nonCashGrossInExplora - cashboxFromBillingExplora;
+
     const gross = cashInDriver + nonCashInExplora;
-    const cashboxRate = .05;
+    const grossBeforeCashbox = cashGrossInDriver + nonCashGrossInExplora;
     const cashboxGross = cashboxRecords.reduce((sum, row) => sum + amountOf(row), 0);
     const cashboxTotal = cashboxGross * cashboxRate;
     const cashboxInDriver = cashboxCashRecords.reduce((sum, row) => sum + amountOf(row) * cashboxRate, 0);
@@ -764,8 +772,8 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     const netSettlementToDriver = billingNetToDriver + expenseAmountToDriver;
 
     const billingTab = {
-      resetMs:resetBillingMs, records:billingRecords, expenses:[], gross, expenseTotal:0,
-      cashInDriver, nonCashInExplora, billingShareEach,
+      resetMs:resetBillingMs, records:billingRecords, expenses:[], gross, grossBeforeCashbox, expenseTotal:0,
+      cashGrossInDriver, nonCashGrossInExplora, cashInDriver, nonCashInExplora, billingShareEach,
       amountToDriver:amountToDriverForBilling, amountFromDriver:amountFromDriverForBilling,
       netSettlementToDriver:billingNetToDriver,
       summaryLabel:"Facturación abierta"
@@ -794,7 +802,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       resetMs:tabs[activeClosureKind(state.tab) || "caja_chica"]?.resetMs || 0,
       records:billingRecords, billingRecords, cashRecords, exploraRecords, expenses:filteredExpenses, tabs,
       cashboxRecords, cashboxCashRecords, cashboxExploraRecords,
-      gross, cashInDriver, nonCashInExplora, billingShareEach,
+      gross, grossBeforeCashbox, cashGrossInDriver, nonCashGrossInExplora, cashboxFromBillingCash, cashboxFromBillingExplora, cashInDriver, nonCashInExplora, billingShareEach,
       cashboxRate, cashboxGross, cashboxTotal, cashboxInDriver, cashboxInExplora, cashboxAmountFromDriver, cashboxAmountToDriver,
       driverShare:billingShareEach, exploraShare:billingShareEach,
       driverShareFromCash:cashInDriver * .5, exploraShareFromCash:cashInDriver * .5,
@@ -887,22 +895,30 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 
   function movementRows(summary = computeSummary()) {
     const rows = [];
-    const kind = activeClosureKind(state.tab);
-    const paymentRows = kind === "caja_chica" ? summary.cashboxRecords : (kind === "explora" ? summary.exploraRecords : kind === "chofer" ? summary.cashRecords : []);
-    const expenseRows = kind === "gastos" ? summary.expenses : [];
+    // Última actividad debe ser global e igual en todos los módulos:
+    // cobros + caja chica automática + gastos + cierres, sin filtrar por pestaña.
+    const paymentRows = summary.billingRecords || summary.records || [];
+    const cashboxRows = summary.cashboxRecords || [];
+    const expenseRows = summary.expenses || [];
+
     for (const row of paymentRows || []) {
       const amount = amountOf(row), method = methodOf(row), at = rowMs(row);
       if (!(amount > 0)) continue;
-      if (kind !== "caja_chica") {
-        rows.push({
-          at, type:"payment", title:`${dateShort(at)} · ${paymentLabel(method)}`,
-          meta:safe(row.description || row.detalle || row.notes || row.ruta || "Servicio registrado"),
-          detail: method === "cash"
-            ? `Cobró el chofer en efectivo: ${currency(amount)} · En el cierre de facturación se compara contra lo cobrado por Explora`
-            : `Cobró Explora: ${currency(amount)} · En el cierre de facturación se compara contra el efectivo del chofer`,
-          amount, positive:true
-        });
-      }
+      const cashbox = amount * .05;
+      const net = amount - cashbox;
+      rows.push({
+        at, type:"payment", title:`${dateShort(at)} · ${paymentLabel(method)}`,
+        meta:safe(row.description || row.detalle || row.notes || row.ruta || "Servicio registrado"),
+        detail: method === "cash"
+          ? `Cobró el chofer en efectivo: ${currency(amount)} · Caja chica ${currency(cashbox)} · Neto facturación ${currency(net)}`
+          : `Cobró Explora: ${currency(amount)} · Caja chica ${currency(cashbox)} · Neto facturación ${currency(net)}`,
+        amount, positive:true
+      });
+    }
+
+    for (const row of cashboxRows || []) {
+      const amount = amountOf(row), method = methodOf(row), at = rowMs(row);
+      if (!(amount > 0)) continue;
       const cashbox = amount * .05;
       rows.push({
         at: at + 1, type:"cashbox", title:`${dateShort(at)} · Caja chica 5%`,
@@ -911,9 +927,10 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
         amount:-cashbox, negative:true
       });
     }
+
     for (const row of expenseRows || []) {
       const at = rowMs(row);
-      const { amount, driverPart, exploraPart, payer } = expenseParts(row);
+      const { amount, driverPart, exploraPart } = expenseParts(row);
       if (!(amount > 0)) continue;
       rows.push({
         at, type:"expense", title:`${dateShort(at)} · ${expenseTypeLabel(row)}`,
@@ -922,15 +939,10 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
         amount:-amount, negative:true
       });
     }
+
     for (const row of state.closures.filter(r => safe(r.closureMode || r.periodType) === "on_demand")) {
-      const closureKind = closureKindOf(row);
-      if (kind) {
-        if (kind === "caja_chica" && closureKind !== "caja_chica") continue;
-        if (kind === "gastos" && closureKind !== "gastos") continue;
-        if (isBillingClosureKind(kind) && !isBillingClosureKind(closureKind)) continue;
-        if (!isBillingClosureKind(kind) && closureKind !== kind) continue;
-      }
       const at = rowMs(row);
+      const closureKind = closureKindOf(row);
       rows.push({
         at, type:"closure", title:`${dateShort(at)} · ${closureTitle(closureKind)}`,
         meta:safe(row.statusLabel || row.status || "Cierre solicitado"),
@@ -1019,33 +1031,37 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       pill = t.netSettlementToDriver > 0 ? "Explora reintegra al chofer" : t.netSettlementToDriver < 0 ? "Chofer reconoce a Explora" : "Gastos equilibrados";
       pillValue = abs(t.netSettlementToDriver);
       lines.push(
-        ["Gastos pagados por chofer", currency(summary.expensesPaidByDriver)],
-        ["Gastos pagados por Explora/Ualá", currency(summary.expensesPaidByExplora)],
+        ["Gastos cargados por chofer", currency(summary.expenseTotal)],
         ["Parte chofer", currency(summary.driverExpenseShare)],
-        ["Parte Explora", currency(summary.exploraExpenseShare)]
+        ["Parte Explora", currency(summary.exploraExpenseShare)],
+        ["Explora reintegra", currency(t.amountToDriver || 0)]
       );
     } else if (state.tab === "explora") {
       const t = tabSummary(summary, "explora");
       main = summary.nonCashInExplora;
-      sub = pending ? "Digital nuevo desde el cierre pendiente" : "Facturación abierta: se compara digital de Explora contra efectivo del chofer";
+      sub = pending ? "Digital neto nuevo desde el cierre pendiente" : "Facturación neta: ya descuenta caja chica 5%";
       pill = t.amountToDriver > 0 ? "Explora paga al chofer" : t.amountFromDriver > 0 ? "Chofer paga a Explora" : "Facturación equilibrada";
       pillValue = Math.max(t.amountToDriver, t.amountFromDriver);
       lines.push(
-        ["Digital cobrado por Explora", currency(summary.nonCashInExplora)],
-        ["Efectivo cobrado por chofer", currency(summary.cashInDriver)],
-        ["Total facturado", currency(summary.gross)],
+        ["Digital bruto cobrado", currency(summary.nonCashGrossInExplora || 0)],
+        ["Caja chica digital 5%", `-${currency(summary.cashboxFromBillingExplora || 0)}`],
+        ["Digital neto para facturación", currency(summary.nonCashInExplora)],
+        ["Efectivo neto del chofer", currency(summary.cashInDriver)],
+        ["Total neto facturado", currency(summary.gross)],
         ["Parte de cada uno 50%", currency(summary.billingShareEach)]
       );
     } else if (state.tab === "chofer") {
       const t = tabSummary(summary, "chofer");
       main = summary.cashInDriver;
-      sub = pending ? "Efectivo nuevo desde el cierre pendiente" : "Facturación abierta: se compara efectivo del chofer contra digital de Explora";
+      sub = pending ? "Efectivo neto nuevo desde el cierre pendiente" : "Facturación neta: ya descuenta caja chica 5%";
       pill = t.amountToDriver > 0 ? "Explora paga al chofer" : t.amountFromDriver > 0 ? "Chofer paga a Explora" : "Facturación equilibrada";
       pillValue = Math.max(t.amountToDriver, t.amountFromDriver);
       lines.push(
-        ["Efectivo cobrado por chofer", currency(summary.cashInDriver)],
-        ["Digital cobrado por Explora", currency(summary.nonCashInExplora)],
-        ["Total facturado", currency(summary.gross)],
+        ["Efectivo bruto cobrado", currency(summary.cashGrossInDriver || 0)],
+        ["Caja chica efectivo 5%", `-${currency(summary.cashboxFromBillingCash || 0)}`],
+        ["Efectivo neto para facturación", currency(summary.cashInDriver)],
+        ["Digital neto de Explora", currency(summary.nonCashInExplora)],
+        ["Total neto facturado", currency(summary.gross)],
         ["Parte de cada uno 50%", currency(summary.billingShareEach)]
       );
     } else {
@@ -1251,7 +1267,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     } else {
       const resultLabel = latest.amountToDriver > 0 ? "Explora paga al chofer" : latest.amountFromDriver > 0 ? "Chofer paga a Explora" : "Facturación equilibrada";
       const resultValue = Math.max(latest.amountToDriver || 0, latest.amountFromDriver || 0);
-      summary.innerHTML = `<article><span>Efectivo chofer</span><strong>${currency(latest.cashInDriver || 0)}</strong></article><article><span>Digital Explora</span><strong>${currency(latest.nonCashInExplora || 0)}</strong></article><article><span>Total facturado</span><strong>${currency(latest.gross || 0)}</strong></article><article><span>Parte de cada uno</span><strong>${currency(latest.billingShareEach || 0)}</strong></article><article><span>${esc(resultLabel)}</span><strong>${currency(resultValue)}</strong></article>`;
+      summary.innerHTML = `<article><span>Efectivo neto chofer</span><strong>${currency(latest.cashInDriver || 0)}</strong></article><article><span>Digital neto Explora</span><strong>${currency(latest.nonCashInExplora || 0)}</strong></article><article><span>Total neto facturado</span><strong>${currency(latest.gross || 0)}</strong></article><article><span>Parte de cada uno</span><strong>${currency(latest.billingShareEach || 0)}</strong></article><article><span>${esc(resultLabel)}</span><strong>${currency(resultValue)}</strong></article>`;
     }
   }
 
