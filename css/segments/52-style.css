@@ -117,6 +117,8 @@ body.explora-pay-mode #mainBottomNav.performance-bottom-nav{
 .pay-closure-summary{display:grid;gap:10px;margin:14px 0;}
 .pay-closure-summary article{border:1px solid var(--pay-line);border-radius:18px;padding:12px 13px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
 .pay-closure-summary span{font-size:13px;color:var(--pay-muted);font-weight:700;}.pay-closure-summary strong{font-size:17px;color:var(--pay-ink);white-space:nowrap;}
+.pay-closure-summary article.closure-payment-result,.pay-closure-summary article.settlement-result-green{border-color:rgba(32,136,58,.34);background:linear-gradient(180deg,#f2fff6 0%,#ffffff 100%);box-shadow:0 8px 18px rgba(32,136,58,.08);}
+.pay-closure-summary article.closure-payment-result span,.pay-closure-summary article.closure-payment-result strong,.pay-closure-summary article.settlement-result-green span,.pay-closure-summary article.settlement-result-green strong{color:#20883a!important;}
 .pay-closure-field{display:grid;gap:7px;margin:13px 0;}
 .pay-closure-field label{font-size:12px;font-weight:850;color:#53596e;text-transform:uppercase;letter-spacing:.04em;}
 .pay-closure-field select,.pay-closure-field input{width:100%;border:1px solid var(--pay-line);border-radius:16px;padding:13px 14px;font-size:16px;background:#fff;color:var(--pay-ink);}
