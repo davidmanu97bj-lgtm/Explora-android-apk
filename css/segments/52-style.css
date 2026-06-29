@@ -486,7 +486,7 @@ body.explora-pay-mode.pay-notifications-open .dashboard-shell-real{padding-botto
 .closure-liquidation-label{font-size:12.5px!important;font-weight:650!important;letter-spacing:.004em;}
 .pay-liquid-pill .closure-liquidation-label{font-size:13px!important;}
 
-/* EXPLORA v31 · Eficiencia operativa/KM */
+/* EXPLORA v32 · Eficiencia propia/KM */
 .pay-efficiency-btn{background:linear-gradient(145deg,#ffe66f,#e9bf45);border-color:rgba(233,191,69,.78);color:#7a5510;overflow:visible;}
 .pay-efficiency-btn[hidden]{display:none!important;}
 .pay-efficiency-icon{width:34px;height:34px;display:block;background:currentColor;-webkit-mask:url("../../assets/icono_eficiencia_km.png") center/contain no-repeat;mask:url("../../assets/icono_eficiencia_km.png") center/contain no-repeat;}
@@ -523,6 +523,21 @@ body.explora-pay-mode.pay-notifications-open .dashboard-shell-real{padding-botto
 .pay-efficiency-warning{border-radius:18px;background:#fff5df;border:1px solid rgba(228,181,50,.35);color:#6d571d;padding:12px 13px;font-size:13px;line-height:1.38;font-weight:760;}
 .pay-efficiency-warning small{display:block;margin-top:4px;color:#8a6b22;font-weight:850;}
 .pay-efficiency-note{border-radius:16px;background:#eef3ff;color:var(--pay-blue);padding:10px 12px;font-size:12.5px;font-weight:850;text-align:center;}
+
+.pay-efficiency-initial-card{border:1px solid var(--pay-line);border-radius:22px;background:linear-gradient(180deg,#fff 0%,#f8f9fd 100%);padding:16px;display:grid;gap:10px;}
+.pay-efficiency-initial-card strong{font-size:19px;line-height:1.1;color:var(--pay-ink);font-weight:920;letter-spacing:-.025em;}
+.pay-efficiency-initial-card p{margin:0;color:#666d82;font-size:13.5px;font-weight:740;line-height:1.36;}
+.pay-efficiency-initial-card label{font-size:12px;font-weight:900;color:#70768c;text-transform:uppercase;letter-spacing:.055em;}
+.pay-efficiency-initial-card input{width:100%;height:48px;border-radius:16px;border:1px solid rgba(190,197,215,.95);background:#fff;padding:0 13px;font:850 18px/1 var(--pay-font);color:var(--pay-ink);outline:none;}
+.pay-efficiency-initial-card input:focus{border-color:rgba(34,99,224,.45);box-shadow:0 0 0 3px rgba(34,99,224,.10);}
+.pay-efficiency-initial-card small{font-size:12.5px;color:#6b7288;font-weight:720;line-height:1.32;}
+.pay-efficiency-form-actions{display:flex;gap:10px;margin-top:2px;}
+.pay-efficiency-secondary,.pay-efficiency-primary{flex:1;border:0;border-radius:16px;min-height:46px;font:900 13px/1 var(--pay-font);letter-spacing:.01em;}
+.pay-efficiency-secondary{background:#eef1f8;color:#323746;}
+.pay-efficiency-primary{background:var(--pay-blue);color:#fff;box-shadow:0 10px 22px rgba(34,99,224,.22);}
+.pay-efficiency-form-message{min-height:17px;font-size:12.5px;font-weight:800;color:#6d7285;}
+.pay-efficiency-form-message.is-error{color:#c83a3a;}
+.pay-efficiency-form-message.is-ok{color:#178a3a;}
 .pay-closure-km-field small{color:#667087;font-size:12px;font-weight:720;line-height:1.32;}
 body.explora-pay-mode.pay-notifications-open #payEfficiencyBtn{display:none!important;}
 @media (max-width:390px){.pay-efficiency-grid{grid-template-columns:1fr}.pay-efficiency-grid .pay-efficiency-wide{grid-column:auto}.pay-efficiency-icon{width:31px;height:31px}}
