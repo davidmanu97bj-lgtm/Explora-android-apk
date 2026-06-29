@@ -1,7 +1,7 @@
-/* Compatibilidad validada: v3100-eficiencia-operativa-km */
+/* Compatibilidad validada: v3200-eficiencia-propia-km */
 /* EXPLORA PWA service worker · v2.5.1 */
 const CACHE_PREFIX = 'explora-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v3100-eficiencia-operativa-km`;
+const CACHE_NAME = `${CACHE_PREFIX}v3200-eficiencia-propia-km`;
 const APP_SHELL = [
   './',
   './index.html',
@@ -26,8 +26,8 @@ const APP_SHELL = [
   './css/segments/49-style.css?v=2456-personal-record-server-authoritative',
   './css/segments/50-style.css?v=2458-admin-driver-production-safe',
   './css/segments/51-style.css?v=2484-weekly-mileage-modal-ux',
-  './css/segments/52-style.css?v=3100-eficiencia-operativa-km',
-  './js/segments/52-script.mjs?v=3100-eficiencia-operativa-km',
+  './css/segments/52-style.css?v=3200-eficiencia-propia-km',
+  './js/segments/52-script.mjs?v=3200-eficiencia-propia-km',
   './assets/icono_eficiencia_km.png',
   './js/segments/49-script.mjs?v=2488-mileage-close-fast',
   './js/segments/49-mileage-model.mjs?v=2477-weekly-mileage-v15-admin-card-clickable',
@@ -98,4 +98,4 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
-/* cache bump: v3100 eficiencia operativa km */
+/* cache bump: v3200 eficiencia propia km */
