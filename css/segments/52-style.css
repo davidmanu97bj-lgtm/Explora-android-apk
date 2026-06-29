@@ -1,4 +1,4 @@
-/* EXPLORA · Pago Home v18 · cierre habilitado estilo suave */
+/* EXPLORA · Pago Home v22 · resumen 50/50 anterior */
 :root{
   --pay-gold:#e9bf45;
   --pay-gold-2:#f4d857;
@@ -68,6 +68,10 @@ body.explora-pay-mode #mainBottomNav.performance-bottom-nav{
 .pay-eye svg{width:31px;height:31px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round;}
 .pay-subtitle{display:block;color:#303244;font-size:16px;font-weight:480;line-height:1.35;margin-top:9px;}
 .pay-subtitle b{display:block;color:#2f8b35;font-weight:800;margin-top:2px;}
+.pay-subtitle .pay-previous-breakdown{display:grid;gap:2px;margin-top:5px;color:#2f8b35;font-size:13px;font-weight:780;line-height:1.25;}
+.pay-subtitle .pay-previous-breakdown span{display:flex;align-items:baseline;justify-content:space-between;gap:9px;max-width:100%;}
+.pay-subtitle .pay-previous-breakdown strong{color:#20883a;font-weight:900;white-space:nowrap;}
+.pay-subtitle .pay-previous-single{display:block;color:#2f8b35;font-weight:800;margin-top:3px;}
 .pay-enter{border:0;background:transparent;color:var(--pay-blue);font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px;padding:8px 0 0;white-space:nowrap;}
 .pay-enter svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;}
 .pay-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0 20px;}
