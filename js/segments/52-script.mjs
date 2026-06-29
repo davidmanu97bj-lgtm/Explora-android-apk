@@ -5,8 +5,12 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 (() => {
   "use strict";
 
-  const VERSION = "explora-pago-home-v38-promedio-propio-5-cierres";
+  const VERSION = "explora-pago-home-v39-perfil-whatsapp-cierres";
   const AR_TZ = "America/Argentina/Cordoba";
+  const EXPLORA_WHATSAPP = "5493757461564";
+  const EXPLORA_WHATSAPP_DISPLAY = "+5493757461564";
+  const EXPLORA_CUIT = "20-40411688-7";
+  const EXPLORA_ALIAS = "mp.explora";
   const $ = id => document.getElementById(id);
   const state = {
     tab:"caja_chica",
@@ -416,6 +420,14 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
           <div class="pay-closure-actions"><button class="pay-closure-secondary" id="payClosureCancel" type="button">Cancelar</button><button class="pay-closure-primary" id="payClosureSubmit" type="button">Pedir cierre</button></div>
         </section>
       </div>
+      <div class="pay-profile-backdrop" id="payProfileBackdrop" aria-hidden="true">
+        <section class="pay-profile-modal" role="dialog" aria-modal="true" aria-labelledby="payProfileTitle">
+          <header><div><h2 id="payProfileTitle">Mi perfil</h2><p>Datos necesarios para cobrar y pedir cierres.</p></div><button class="pay-profile-close" id="payProfileClose" type="button" aria-label="Volver">×</button></header>
+          <div class="pay-profile-body" id="payProfileBody"></div>
+          <div class="pay-profile-message" id="payProfileMessage" role="status"></div>
+          <div class="pay-profile-actions"><button class="pay-profile-secondary" id="payProfileBack" type="button">Volver</button><button class="pay-profile-primary" id="payProfileSave" type="button">Guardar</button></div>
+        </section>
+      </div>
     `;
     shell.insertAdjacentHTML("afterbegin", html);
     document.body.classList.add("explora-pay-mode");
@@ -543,6 +555,10 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     });
     $("payClosureReceiptInput")?.addEventListener("change", event => { state.modalFile = event.target?.files?.[0] || null; renderClosureModal(); });
     $("payClosureSubmit")?.addEventListener("click", submitClosureModal);
+    $("payProfileClose")?.addEventListener("click", closeDriverProfileModal);
+    $("payProfileBack")?.addEventListener("click", closeDriverProfileModal);
+    $("payProfileBackdrop")?.addEventListener("click", event => { if (event.target?.id === "payProfileBackdrop") closeDriverProfileModal(); });
+    $("payProfileSave")?.addEventListener("click", saveDriverProfileModal);
     document.querySelector('[data-pay-nav="inicio"]')?.addEventListener("click", () => showPayView("inicio"));
     document.querySelector('[data-pay-nav="actividad"]')?.addEventListener("click", () => {
       showPayView("inicio");
@@ -566,8 +582,13 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     $("payMoreList")?.addEventListener("click", event => {
       const button = event.target.closest("[data-pay-more-action]");
       if (!button) return;
+      const action = safe(button.dataset.payMoreAction);
+      if (action === "abrir-perfil") {
+        openDriverProfileModal();
+        return;
+      }
       showPayView("inicio");
-      runExistingAction(button.dataset.payMoreAction);
+      runExistingAction(action);
     });
     $("payMoreAdminList")?.addEventListener("click", event => {
       const button = event.target.closest("[data-pay-more-action]");
@@ -1173,6 +1194,239 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     add("choferes", targetUid);
     add("usuarios", targetUid);
     return candidates;
+  }
+
+
+  function firstProfileValue(profile = {}, fields = []) {
+    for (const field of fields) {
+      const value = profile?.[field];
+      if (value === null || value === undefined || value === "") continue;
+      if (typeof value === "object") continue;
+      const text = safe(value);
+      if (text) return text;
+    }
+    return "";
+  }
+
+  function driverFullNameFromProfile(profile = state.profile) {
+    return firstProfileValue(profile, ["nombreCompleto", "fullName", "nombre", "displayName", "name", "email"]) || displayName();
+  }
+
+  function driverCarLabel(profile = state.profile) {
+    const model = firstProfileValue(profile, ["autoModelo", "modeloAuto", "vehicleModel", "carModel", "modelo", "auto", "vehiculo", "rodado"])
+      || safe(profile?.auto?.modelo || profile?.vehiculo?.modelo || profile?.car?.model);
+    const plate = firstProfileValue(profile, ["patente", "plate", "dominio", "licensePlate", "autoPatente", "vehiclePlate"])
+      || safe(profile?.auto?.patente || profile?.vehiculo?.patente || profile?.car?.plate);
+    const label = [model, plate].filter(Boolean).join(" · ");
+    return label || "Sin auto asignado";
+  }
+
+  function driverPaymentProfile(profile = state.profile) {
+    return {
+      fullName:driverFullNameFromProfile(profile),
+      car:driverCarLabel(profile),
+      phone:firstProfileValue(profile, ["telefono", "teléfono", "phone", "celular", "mobile", "whatsapp", "numeroTelefono", "numeroDeTelefono"]),
+      cuit:firstProfileValue(profile, ["cuit", "CUIT", "cuil", "taxId", "dniFiscal"]),
+      alias:firstProfileValue(profile, ["aliasCobro", "paymentAlias", "aliasParaCobrar", "alias", "mercadoPagoAlias", "aliasMp", "mpAlias"])
+    };
+  }
+
+  function driverPaymentProfileForUid(uid = getDriverUid()) {
+    const targetUid = safe(uid);
+    const profile = targetUid && targetUid !== getOwnDriverUid()
+      ? (state.drivers.find(driver => driver.uid === targetUid)?.profile || {})
+      : (state.profile || {});
+    return driverPaymentProfile(profile);
+  }
+
+  function paymentProfileMissingFields(data = driverPaymentProfile()) {
+    const missing = [];
+    if (!safe(data.phone)) missing.push("número de teléfono");
+    if (!safe(data.cuit)) missing.push("CUIT");
+    if (!safe(data.alias)) missing.push("alias para cobrar");
+    return missing;
+  }
+
+  function requireOwnPaymentProfileComplete() {
+    if (isAdmin()) return;
+    const payment = driverPaymentProfile(state.profile || {});
+    const missing = paymentProfileMissingFields(payment);
+    if (missing.length) throw new Error(`Completá Mi perfil antes de pedir el cierre: ${missing.join(", ")}.`);
+  }
+
+  function closureAmountLine(summary = {}) {
+    const fromDriver = number(summary.amountFromDriver || summary.amountDueFromDriver || 0);
+    const toDriver = number(summary.amountToDriver || summary.amountDueToDriver || 0);
+    if (toDriver > 0) return { direction:"explora_to_driver", label:"Explora debe liquidar al chofer", amount:toDriver };
+    if (fromDriver > 0) return { direction:"driver_to_explora", label:"Chofer debe liquidar a Explora", amount:fromDriver };
+    return { direction:"balanced", label:"Nadie debe liquidar", amount:0 };
+  }
+
+  function closurePaymentRowsHtml({ driverPayment = {}, direction = "balanced" } = {}) {
+    if (direction === "explora_to_driver") {
+      return [
+        ["Alias chofer", driverPayment.alias || "Sin cargar"],
+        ["CUIT chofer", driverPayment.cuit || "Sin cargar"],
+        ["Teléfono chofer", driverPayment.phone || "Sin cargar"]
+      ].map(([label,value]) => `<article class="pay-payment-info-row"><span>${esc(label)}</span><strong>${esc(value)}</strong></article>`).join("");
+    }
+    if (direction === "driver_to_explora") {
+      return [
+        ["Alias Explora", EXPLORA_ALIAS],
+        ["CUIT David", EXPLORA_CUIT],
+        ["WhatsApp Explora", EXPLORA_WHATSAPP_DISPLAY]
+      ].map(([label,value]) => `<article class="pay-payment-info-row"><span>${esc(label)}</span><strong>${esc(value)}</strong></article>`).join("");
+    }
+    return "";
+  }
+
+  function closurePaymentDataForPayload(targetUid = getDriverUid(), summary = {}) {
+    const driverPayment = driverPaymentProfileForUid(targetUid);
+    const result = closureAmountLine(summary);
+    return {
+      driverPaymentPhone:safe(driverPayment.phone),
+      driverPaymentCuit:safe(driverPayment.cuit),
+      driverPaymentAlias:safe(driverPayment.alias),
+      exploraPaymentAlias:EXPLORA_ALIAS,
+      exploraPaymentCuit:EXPLORA_CUIT,
+      exploraPaymentWhatsapp:EXPLORA_WHATSAPP_DISPLAY,
+      paymentDirection:result.direction,
+      paymentResultLabel:result.label,
+      paymentResultAmount:Number(result.amount || 0)
+    };
+  }
+
+  function paymentDataFromClosure(closure = {}) {
+    const direction = safe(closure.paymentDirection) || (number(closure.amountDueToDriver || 0) > 0 ? "explora_to_driver" : number(closure.amountDueFromDriver || 0) > 0 ? "driver_to_explora" : "balanced");
+    return {
+      direction,
+      driverPayment:{
+        phone:safe(closure.driverPaymentPhone || closure.choferTelefono || closure.telefonoChofer),
+        cuit:safe(closure.driverPaymentCuit || closure.choferCuit || closure.cuitChofer),
+        alias:safe(closure.driverPaymentAlias || closure.choferAlias || closure.aliasChofer)
+      }
+    };
+  }
+
+  function closureWhatsappText({ kind = state.tab, summary = {}, targetName = displayName(), targetUid = getDriverUid(), requestedBy = displayName() } = {}) {
+    const result = closureAmountLine(summary);
+    const driverPayment = driverPaymentProfileForUid(targetUid);
+    const k = activeClosureKind(kind);
+    const lines = [
+      "*PEDIDO DE CIERRE EXPLORA*",
+      `Chofer: ${targetName}`,
+      `Pedido por: ${requestedBy}`,
+      `Tipo: ${closureTitle(k)}`,
+      `Resultado: *${result.label}${result.amount > 0 ? ` ${currency(result.amount)}` : ""}*`
+    ];
+    if (k === "gastos") {
+      lines.push(`Gastos cargados: ${currency(summary.expenseTotal || 0)}`);
+      lines.push(`Parte Explora: ${currency(summary.exploraExpenseShare || summary.amountToDriver || 0)}`);
+    } else if (k === "caja_chica") {
+      lines.push(`Efectivo base: ${currency(summary.gross || 0)}`);
+      lines.push(`Caja chica 5%: ${currency(summary.cashboxTotal || summary.amountFromDriver || 0)}`);
+    } else {
+      lines.push(`Efectivo chofer: ${currency(summary.cashInDriver || 0)}`);
+      lines.push(`Digital Explora: ${currency(summary.nonCashInExplora || 0)}`);
+      lines.push(`Total facturado: ${currency(summary.gross || 0)}`);
+      lines.push(`Parte de cada uno: ${currency(summary.billingShareEach || 0)}`);
+    }
+    if (result.direction === "explora_to_driver") {
+      lines.push("");
+      lines.push("*Datos para pagar al chofer:* ");
+      lines.push(`Alias: ${driverPayment.alias || "sin cargar"}`);
+      lines.push(`CUIT: ${driverPayment.cuit || "sin cargar"}`);
+      lines.push(`Teléfono: ${driverPayment.phone || "sin cargar"}`);
+    } else if (result.direction === "driver_to_explora") {
+      lines.push("");
+      lines.push("*Datos de Explora para recibir:* ");
+      lines.push(`Alias: ${EXPLORA_ALIAS}`);
+      lines.push(`CUIT David: ${EXPLORA_CUIT}`);
+      lines.push(`WhatsApp: ${EXPLORA_WHATSAPP_DISPLAY}`);
+    }
+    lines.push("");
+    lines.push("El comprobante se cargará por la app.");
+    return lines.join("\n");
+  }
+
+  function openWhatsappToExplora(text = "") {
+    const url = `https://wa.me/${EXPLORA_WHATSAPP}?text=${encodeURIComponent(text)}`;
+    try {
+      const opened = window.open(url, "_blank", "noopener");
+      if (!opened) window.location.href = url;
+      return true;
+    } catch (_) {
+      try { window.location.href = url; return true; } catch (__) { return false; }
+    }
+  }
+
+  function renderDriverProfileModal() {
+    const body = $("payProfileBody");
+    if (!body) return;
+    const data = driverPaymentProfile(state.profile || {});
+    body.innerHTML = `
+      <div class="pay-profile-readonly"><span>Nombre completo</span><strong>${esc(data.fullName || "Chofer")}</strong></div>
+      <div class="pay-profile-readonly"><span>Auto modelo y patente</span><strong>${esc(data.car || "Sin auto asignado")}</strong></div>
+      <label class="pay-profile-field" for="payProfilePhone"><span>Número de teléfono</span><input id="payProfilePhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Ej: 3757461564" value="${esc(data.phone)}" required /></label>
+      <label class="pay-profile-field" for="payProfileCuit"><span>CUIT</span><input id="payProfileCuit" type="text" inputmode="numeric" autocomplete="off" placeholder="Ej: 20-00000000-0" value="${esc(data.cuit)}" required /></label>
+      <label class="pay-profile-field" for="payProfileAlias"><span>Alias para cobrar</span><input id="payProfileAlias" type="text" autocomplete="off" placeholder="Ej: alias.mercadopago" value="${esc(data.alias)}" required /></label>
+      <div class="pay-profile-note">Estos tres datos los carga el chofer y se adjuntan al pedir cierre para que Explora pueda liquidar más rápido.</div>`;
+    const msg = $("payProfileMessage");
+    if (msg) { msg.textContent = ""; msg.className = "pay-profile-message"; }
+  }
+
+  function openDriverProfileModal() {
+    showPayView("inicio");
+    renderDriverProfileModal();
+    const backdrop = $("payProfileBackdrop");
+    if (!backdrop) return;
+    backdrop.classList.add("is-open");
+    backdrop.setAttribute("aria-hidden", "false");
+    setTimeout(() => $("payProfilePhone")?.focus?.(), 60);
+  }
+
+  function closeDriverProfileModal() {
+    const backdrop = $("payProfileBackdrop");
+    if (!backdrop) return;
+    backdrop.classList.remove("is-open");
+    backdrop.setAttribute("aria-hidden", "true");
+  }
+
+  function setProfileMessage(message = "", type = "") {
+    const msg = $("payProfileMessage");
+    if (!msg) return;
+    msg.textContent = message;
+    msg.className = `pay-profile-message ${type ? `is-${type}` : ""}`.trim();
+  }
+
+  async function saveDriverProfileModal() {
+    if (isAdmin()) return;
+    const phone = safe($("payProfilePhone")?.value || "");
+    const cuit = safe($("payProfileCuit")?.value || "");
+    const alias = safe($("payProfileAlias")?.value || "");
+    const missing = paymentProfileMissingFields({ phone, cuit, alias });
+    if (missing.length) { setProfileMessage(`Completá: ${missing.join(", ")}.`, "error"); return; }
+    const fields = {
+      telefono:phone,
+      numeroTelefono:phone,
+      whatsapp:phone,
+      cuit,
+      aliasCobro:alias,
+      aliasParaCobrar:alias,
+      paymentAlias:alias,
+      paymentProfileCompleted:true,
+      paymentProfileUpdatedAt:serverTimestamp(),
+      paymentProfileUpdatedAtMs:Date.now()
+    };
+    setProfileMessage("Guardando…");
+    try {
+      await updateDriverEfficiencyState(getOwnDriverUid(), fields);
+      state.profile = { ...(state.profile || {}), ...fields };
+      setProfileMessage("Perfil guardado.", "ok");
+      setTimeout(closeDriverProfileModal, 650);
+    } catch (error) {
+      setProfileMessage(error?.message || "No se pudo guardar el perfil.", "error");
+    }
   }
 
   async function updateDriverEfficiencyState(uid = getDriverUid(), rawFields = {}) {
@@ -2391,9 +2645,11 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     const receiptUrl = closureProofUrl(closure);
     const receipt = receiptUrl ? [["Comprobante", "cargado"]] : [];
     const rows = base.concat(detail, [["Estado", closureStatusText(closure)]], receipt).map(([label,value,className]) => `<article${className ? ` class="${esc(className)}"` : ""}><span>${esc(label)}</span><strong>${esc(value)}</strong></article>`).join("");
+    const paymentData = paymentDataFromClosure(closure);
+    const paymentRows = closurePaymentRowsHtml({ driverPayment:paymentData.driverPayment, direction:paymentData.direction });
     const receiptLink = receiptUrl ? `<a class="pay-closure-receipt-link" href="${esc(receiptUrl)}" target="_blank" rel="noopener">Abrir comprobante</a>` : "";
     const alert = due > 0 && !receiptUrl && !adminView ? `<div class="pay-closure-alert">Para quedar al día, cargá el comprobante de transferencia.</div>` : "";
-    return rows + receiptLink + alert;
+    return rows + paymentRows + receiptLink + alert;
   }
 
   function renderClosureModal() {
@@ -2518,6 +2774,9 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     } else {
       summary.innerHTML = `<article><span>Efectivo chofer</span><strong>${currency(latest.cashInDriver || 0)}</strong></article><article><span>Digital Explora</span><strong>${currency(latest.nonCashInExplora || 0)}</strong></article><article><span>Total facturado</span><strong>${currency(latest.gross || 0)}</strong></article><article><span>Parte de cada uno</span><strong>${currency(latest.billingShareEach || 0)}</strong></article><article class="closure-payment-result settlement-result-green"><span class="closure-liquidation-label">Resultado</span><strong>${latest.amountFromDriver > 0 ? `Chofer debe liquidar a Explora ${currency(latest.amountFromDriver)}` : latest.amountToDriver > 0 ? `Explora debe liquidar a chofer ${currency(latest.amountToDriver)}` : "Nadie debe liquidar"}</strong></article>`;
     }
+    const payData = closureAmountLine(latest);
+    const driverPayment = driverPaymentProfileForUid(getDriverUid());
+    summary.innerHTML += closurePaymentRowsHtml({ driverPayment, direction:payData.direction });
   }
 
   async function submitClosureModal() {
@@ -2661,9 +2920,12 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     }
     // Puede existir un cierre anterior pendiente; eso no debe impedir cortar un nuevo período
     // si ya hay movimientos nuevos después del último corte.
+    if (!isAdmin()) requireOwnPaymentProfileComplete();
     const fullSummary = isAdmin() ? await computeDriverSummary(targetUid) : (state.latestSummary || computeSummary());
     requireClosureAllowed(kind, fullSummary);
     const summary = tabSummary(fullSummary, kind);
+    const paymentPayload = closurePaymentDataForPayload(targetUid, summary);
+    const whatsappText = closureWhatsappText({ kind, summary, targetName, targetUid, requestedBy:isAdmin() ? accountName() : displayName() });
     const cutoffAtMs = Date.now();
     let kmInitial = 0, kmActual = 0;
     const isBillingRequest = isBillingClosureKind(kind);
@@ -2697,6 +2959,9 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       requestedByUid:user.uid,
       requestedByName:isAdmin() ? accountName() : displayName(),
       requestedByRole:isAdmin() ? "admin" : "driver",
+      ...paymentPayload,
+      whatsappNoticeTo:EXPLORA_WHATSAPP_DISPLAY,
+      whatsappNoticeText:whatsappText,
       ...(isBillingRequest ? efficiencyPayloadFromKm({ kmActual, kmInicial:kmInitial, summary, pending:billingKmPending, uid:targetUid, beforeMs:cutoffAtMs }) : {}),
       ...(isBillingRequest && isAdmin() && billingKmPending ? { kmPendienteChofer:true, kmTaskStatus:"pending_driver_km" } : {}),
       gross:Number(summary.gross || 0),
@@ -2725,6 +2990,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     };
     const created = await addDoc(collection(state.db, "cierres_semanales"), payload);
     state.closures = [{ ...payload, id:created.id, createdAtMs:cutoffAtMs, updatedAtMs:cutoffAtMs }, ...state.closures.filter(row => row.id !== created.id)];
+    if (!isAdmin()) openWhatsappToExplora(whatsappText);
     if (isBillingRequest && kmActual > 0) {
       updateDriverEfficiencyState(targetUid, {
         lastKnownKm:Number(kmActual || 0),
