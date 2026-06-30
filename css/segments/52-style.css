@@ -748,3 +748,59 @@ body.explora-pay-mode.pay-notifications-open #payEfficiencyBtn{display:none!impo
   .pay-profile-actions{gap:8px;}
   .pay-profile-actions button{font-size:14px;padding:13px 10px;}
 }
+
+/* v4017 admin delete financial movements */
+.pay-admin-delete-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:10070;
+  display:none;
+  align-items:flex-end;
+  justify-content:center;
+  padding:18px;
+  background:rgba(17,24,39,.56);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
+.pay-admin-delete-backdrop.is-open{display:flex;}
+.pay-admin-delete-modal{
+  width:min(620px,100%);
+  max-height:min(88vh,780px);
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+  border-radius:28px;
+  background:#fff;
+  box-shadow:0 26px 80px rgba(15,23,42,.30);
+  padding:20px;
+  color:#202436;
+}
+.pay-admin-delete-modal *,
+.pay-admin-delete-modal *::before,
+.pay-admin-delete-modal *::after{box-sizing:border-box;}
+.pay-admin-delete-modal header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;}
+.pay-admin-delete-modal h2{margin:0;font-size:clamp(24px,6vw,34px);line-height:1.05;font-weight:950;letter-spacing:-.045em;}
+.pay-admin-delete-modal p{margin:6px 0 0;color:#747b91;font-weight:800;line-height:1.25;}
+.pay-admin-delete-close{width:44px;height:44px;border:0;border-radius:16px;background:#f1f3f8;color:#25293a;font-size:34px;line-height:1;display:grid;place-items:center;flex:0 0 auto;}
+.pay-admin-delete-warning{padding:12px 14px;border-radius:17px;background:#fff7d6;border:1px solid #ecd37c;color:#6b5100;font-size:13px;font-weight:900;line-height:1.28;margin-bottom:10px;}
+.pay-admin-delete-message{min-height:20px;margin:8px 0 10px;color:#6b7280;font-weight:850;line-height:1.25;}
+.pay-admin-delete-message.is-ok{color:#138a3d;}
+.pay-admin-delete-message.is-error{color:#a73333;}
+.pay-admin-delete-list{display:grid;gap:10px;}
+.pay-admin-delete-empty{padding:18px;border-radius:20px;background:#f5f7fd;color:#71788f;font-weight:850;text-align:center;line-height:1.25;}
+.pay-admin-delete-row{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:10px;padding:12px;border:1px solid #dfe4f2;border-radius:20px;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.06);}
+.pay-admin-delete-icon{width:42px;height:42px;border-radius:15px;background:#eef2ff;color:#4c4cf3;display:grid;place-items:center;font-size:22px;font-weight:950;}
+.pay-admin-delete-copy{min-width:0;display:grid;gap:3px;}
+.pay-admin-delete-copy strong{font-size:15.5px;font-weight:950;color:#25293a;line-height:1.18;overflow-wrap:anywhere;}
+.pay-admin-delete-copy small{font-size:13px;font-weight:850;color:#4c4cf3;line-height:1.2;}
+.pay-admin-delete-copy em{font-style:normal;font-size:12.5px;font-weight:750;color:#7b8297;line-height:1.22;}
+.pay-admin-delete-row button{border:0;border-radius:15px;background:#fee2e2;color:#991b1b;font-size:13px;font-weight:950;padding:11px 13px;}
+.pay-admin-delete-row button:disabled{opacity:.55;}
+.pay-admin-delete-actions{display:grid;grid-template-columns:1fr;margin-top:14px;}
+.pay-admin-delete-actions button{border:0;border-radius:18px;background:#f1f3f8;color:#25293a;padding:15px 12px;font-size:16px;font-weight:950;}
+@media (max-width:390px){
+  .pay-admin-delete-backdrop{padding:10px;}
+  .pay-admin-delete-modal{padding:16px;border-radius:24px;max-height:89vh;}
+  .pay-admin-delete-row{grid-template-columns:38px minmax(0,1fr);}
+  .pay-admin-delete-row button{grid-column:1 / -1;width:100%;padding:13px;}
+  .pay-admin-delete-icon{width:38px;height:38px;border-radius:14px;}
+}
