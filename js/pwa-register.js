@@ -1,9 +1,9 @@
-/* EXPLORA PWA registration · v2.3.8 · hard cache refresh */
+/* EXPLORA PWA registration · v2.3.9 · card alerts */
 (() => {
   'use strict';
   if (!('serviceWorker' in navigator)) return;
 
-  const BUILD = 'v4015-driver-admin';
+  const BUILD = 'v4016-card-alerts';
   const reloadOnceKey = `explora-sw-reload-${BUILD}`;
 
   const clearLegacyCaches = async () => {
@@ -21,7 +21,7 @@
   const register = async () => {
     try {
       await clearLegacyCaches();
-      const registration = await navigator.serviceWorker.register('./service-worker.js?build=v4015-driver-admin', {
+      const registration = await navigator.serviceWorker.register('./service-worker.js?build=v4016-card-alerts', {
         scope: './',
         updateViaCache: 'none'
       });
