@@ -5,7 +5,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 (() => {
   "use strict";
 
-  const VERSION = "explora-pago-home-v40-cierre-directo-comprobante";
+  const VERSION = "explora-pago-home-v41-whatsapp-nativo";
   const AR_TZ = "America/Argentina/Cordoba";
   const EXPLORA_WHATSAPP = "5493757461564";
   const EXPLORA_WHATSAPP_DISPLAY = "+5493757461564";
@@ -1362,13 +1362,50 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
   }
 
   function openWhatsappToExplora(text = "") {
-    const url = `https://wa.me/${EXPLORA_WHATSAPP}?text=${encodeURIComponent(text)}`;
+    const encodedText = encodeURIComponent(text || "");
+    const webUrl = `https://wa.me/${EXPLORA_WHATSAPP}?text=${encodedText}`;
+    const nativeUrl = `whatsapp://send?phone=${EXPLORA_WHATSAPP}&text=${encodedText}`;
+    const ua = safe(navigator?.userAgent || "");
+    const mobile = /Android|iPhone|iPad|iPod/i.test(ua);
+
+    // En iOS/Android no usamos wa.me/api.whatsapp.com como primera opción porque abre
+    // una página intermedia de WhatsApp. El esquema nativo abre directamente la app.
+    if (mobile) {
+      let appOpened = false;
+      let fallbackTimer = null;
+      const markOpened = () => { appOpened = true; };
+      const onVisibility = () => {
+        if (document.visibilityState === "hidden") markOpened();
+      };
+      const cleanup = () => {
+        window.removeEventListener("pagehide", markOpened);
+        window.removeEventListener("blur", markOpened);
+        document.removeEventListener("visibilitychange", onVisibility);
+        if (fallbackTimer) clearTimeout(fallbackTimer);
+      };
+
+      try {
+        window.addEventListener("pagehide", markOpened, { once:true });
+        window.addEventListener("blur", markOpened, { once:true });
+        document.addEventListener("visibilitychange", onVisibility);
+        window.location.href = nativeUrl;
+        fallbackTimer = window.setTimeout(() => {
+          cleanup();
+          if (!appOpened && document.visibilityState !== "hidden") window.location.href = webUrl;
+        }, 1600);
+        return true;
+      } catch (_) {
+        cleanup();
+        try { window.location.href = webUrl; return true; } catch (__) { return false; }
+      }
+    }
+
     try {
-      const opened = window.open(url, "_blank", "noopener");
-      if (!opened) window.location.href = url;
+      const opened = window.open(webUrl, "_blank", "noopener");
+      if (!opened) window.location.href = webUrl;
       return true;
     } catch (_) {
-      try { window.location.href = url; return true; } catch (__) { return false; }
+      try { window.location.href = webUrl; return true; } catch (__) { return false; }
     }
   }
 
