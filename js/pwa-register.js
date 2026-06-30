@@ -1,9 +1,9 @@
-/* EXPLORA PWA registration · v2.4.0 · admin delete action fix */
+/* EXPLORA PWA registration · v2.4.1 · activity time home start */
 (() => {
   'use strict';
   if (!('serviceWorker' in navigator)) return;
 
-  const BUILD = 'v4018-admin-delete-action-fix';
+  const BUILD = 'v4019-activity-time-home';
   const reloadOnceKey = `explora-sw-reload-${BUILD}`;
 
   const clearLegacyCaches = async () => {
@@ -21,7 +21,7 @@
   const register = async () => {
     try {
       await clearLegacyCaches();
-      const registration = await navigator.serviceWorker.register('./service-worker.js?build=v4018-admin-delete-action-fix', {
+      const registration = await navigator.serviceWorker.register('./service-worker.js?build=v4019-activity-time-home', {
         scope: './',
         updateViaCache: 'none'
       });
