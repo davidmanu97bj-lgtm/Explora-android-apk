@@ -532,6 +532,229 @@ exports.adminDeleteDriverCompletely = onCall({ region: "southamerica-east1", tim
 
 
 // ============================================================================
+// BORRADO MANUAL FINANCIERO — Admin oficial
+// Borra cobros/gastos o excluye caja chica y ajusta cierres afectados.
+// ============================================================================
+const FINANCIAL_DRIVER_FIELDS = [
+  "driverUid", "choferUid", "uid", "ownerUid", "driverId", "choferId",
+  "userUid", "userId", "createdByUid", "ownerId", "conductorUid", "assignedDriverUid"
+];
+const FINANCIAL_AMOUNT_FIELDS = [
+  "amount", "monto", "valor", "finalPrice", "total", "importe", "price", "precio",
+  "precioFinal", "montoFinal", "montoCobrado", "importeTotal", "finalAmount", "totalAmount",
+  "billingAmount", "chargedAmount", "paidAmount", "fare", "tarifa", "value", "totalCobrado", "facturacion", "billingTotal"
+];
+
+function financialNumber(value) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  const raw = text(value).replace(/\s/g, "");
+  if (!raw) return 0;
+  const cleaned = raw.replace(/[^0-9,.-]/g, "");
+  if (!cleaned || cleaned === "-" || cleaned === "," || cleaned === ".") return 0;
+  const lastComma = cleaned.lastIndexOf(",");
+  const lastDot = cleaned.lastIndexOf(".");
+  let normalizedValue = cleaned;
+  if (lastComma >= 0 && lastDot >= 0) normalizedValue = lastComma > lastDot ? cleaned.replace(/\./g, "").replace(/,/g, ".") : cleaned.replace(/,/g, "");
+  else if (lastDot >= 0) normalizedValue = cleaned.slice(lastDot + 1).length === 3 ? cleaned.replace(/\./g, "") : cleaned;
+  else if (lastComma >= 0) normalizedValue = cleaned.slice(lastComma + 1).length === 3 ? cleaned.replace(/,/g, "") : cleaned.replace(/,/g, ".");
+  const parsed = Number(normalizedValue);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function financialAmountOf(data = {}) {
+  for (const field of FINANCIAL_AMOUNT_FIELDS) {
+    if (data[field] === undefined || data[field] === null || data[field] === "") continue;
+    const amount = financialNumber(data[field]);
+    if (amount > 0) return amount;
+  }
+  return 0;
+}
+
+function financialMethodOf(data = {}) {
+  const raw = normalized(data.paymentMethod || data.metodoPago || data.financialCategory || data.receiptPaymentMethod || data.paymentProvider || data.method);
+  if (/cash|efectivo/.test(raw)) return "cash";
+  if (/qr/.test(raw)) return "qr";
+  if (/card|tarjeta|point/.test(raw)) return "card";
+  if (/transfer|alias|transf/.test(raw)) return "transfer";
+  return raw || "cash";
+}
+
+function financialDriverValues(data = {}) {
+  return FINANCIAL_DRIVER_FIELDS.map(field => text(data[field])).filter(Boolean);
+}
+function financialBelongsToDriver(data = {}, driverUid = "") {
+  const target = text(driverUid);
+  return !!target && financialDriverValues(data).includes(target);
+}
+function financialClosureKind(data = {}) {
+  const raw = normalized(data.closureKind || data.closureType || data.payTab || data.closeKind || data.kind || data.cierreTipo || data.type || data.category);
+  if (/caja|chica|cashbox|bruto/.test(raw)) return "caja_chica";
+  if (/gasto|expense/.test(raw)) return "gastos";
+  if (/explora|digital|transfer|qr|card|tarjeta/.test(raw)) return "explora";
+  if (/chofer|driver|efectivo|cash|factur|billing|cobro/.test(raw)) return "facturacion";
+  return "";
+}
+function financialIsBillingClosure(kind = "") {
+  return ["chofer", "explora", "facturacion"].includes(kind);
+}
+function financialRemoveArrayItem(value, item) {
+  return Array.isArray(value) ? value.map(text).filter(v => v && v !== text(item)) : [];
+}
+function financialExpenseParts(data = {}) {
+  const amount = financialAmountOf(data);
+  const rawRate = Number(data.sharedRate ?? data.porcentajeCompartido ?? data.driverShareRate ?? data.porcentajeChofer);
+  const rate = Number.isFinite(rawRate) ? (rawRate > 1 ? rawRate / 100 : rawRate) : .5;
+  const driverPart = amount * Math.min(1, Math.max(0, rate || .5));
+  const exploraPart = Math.max(0, amount - driverPart);
+  return { amount, driverPart, exploraPart };
+}
+
+async function financialRelatedClosures(driverUid, documentId, includeField) {
+  const results = new Map();
+  const collectionRef = db.collection("cierres_semanales");
+  try {
+    const direct = await collectionRef.where(includeField, "array-contains", documentId).get();
+    direct.docs.forEach(docSnap => results.set(docSnap.id, docSnap));
+  } catch (error) {
+    console.warn("[admin financial delete] included query skipped", includeField, error?.code || error?.message || error);
+  }
+  for (const field of ["driverUid", "choferUid", "uid", "driverId", "choferId"]) {
+    try {
+      const snap = await collectionRef.where(field, "==", driverUid).limit(300).get();
+      snap.docs.forEach(docSnap => {
+        const data = docSnap.data() || {};
+        if (Array.isArray(data[includeField]) && data[includeField].map(text).includes(documentId)) results.set(docSnap.id, docSnap);
+      });
+    } catch (_) {}
+  }
+  return [...results.values()];
+}
+
+function financialBillingClosurePatch(closure = {}, movement = {}) {
+  const amount = financialAmountOf(movement);
+  const method = financialMethodOf(movement);
+  const oldCash = financialNumber(closure.cashInDriver ?? closure.cashGrossInDriver ?? closure.driverActualCash);
+  const oldDigital = financialNumber(closure.exploraCash ?? closure.nonCashInExplora ?? closure.nonCashGrossInExplora);
+  const cash = Math.max(0, oldCash - (method === "cash" ? amount : 0));
+  const digital = Math.max(0, oldDigital - (method === "cash" ? 0 : amount));
+  const gross = Math.max(0, cash + digital);
+  const share = gross * .5;
+  const netToDriver = share - cash;
+  return {
+    gross, grossBeforeCashbox:gross, cashInDriver:cash, cashGrossInDriver:cash,
+    exploraCash:digital, nonCashInExplora:digital, nonCashGrossInExplora:digital,
+    billingShareEach:share, driverShare:share, exploraShare:share, driverEntitlement:share, driverFinal:share,
+    netSettlementToDriver:netToDriver,
+    amountDueFromDriver:Math.max(0, -netToDriver), amountFromDriver:Math.max(0, -netToDriver),
+    amountDueToDriver:Math.max(0, netToDriver), amountToDriver:Math.max(0, netToDriver)
+  };
+}
+
+function financialCashboxClosurePatch(closure = {}, movement = {}) {
+  const amount = financialAmountOf(movement);
+  const reduction = amount * .05;
+  const gross = Math.max(0, financialNumber(closure.cashboxGross ?? closure.gross ?? closure.cashboxBase) - amount);
+  const total = Math.max(0, financialNumber(closure.cashboxTotal ?? closure.mainTotal ?? closure.amountDueFromDriver) - reduction);
+  return {
+    gross, cashboxGross:gross, mainTotal:total,
+    cashboxTotal:total, cashboxInDriver:total, cashboxInExplora:0,
+    amountDueFromDriver:total, amountFromDriver:total,
+    amountDueToDriver:0, amountToDriver:0,
+    netSettlementToDriver:-total
+  };
+}
+
+function financialExpenseClosurePatch(closure = {}, movement = {}) {
+  const { amount, driverPart, exploraPart } = financialExpenseParts(movement);
+  const total = Math.max(0, financialNumber(closure.expenseTotal ?? closure.mainTotal ?? closure.gross) - amount);
+  const oldDriver = financialNumber(closure.driverExpenseShare);
+  const oldExplora = financialNumber(closure.exploraExpenseShare ?? closure.amountDueToDriver);
+  const newDriver = Math.max(0, oldDriver - driverPart);
+  const newExplora = Math.max(0, oldExplora - exploraPart);
+  return {
+    expenseTotal:total, mainTotal:total, gross:total,
+    driverExpenseShare:newDriver, exploraExpenseShare:newExplora,
+    amountDueFromDriver:0, amountFromDriver:0,
+    amountDueToDriver:newExplora, amountToDriver:newExplora,
+    netSettlementToDriver:newExplora
+  };
+}
+
+async function financialAdjustClosures({ type, driverUid, documentId, movement, adminUid }) {
+  const includeField = type === "gasto" ? "includedExpenseIds" : "includedBillingIds";
+  const docs = await financialRelatedClosures(driverUid, documentId, includeField);
+  let adjusted = 0;
+  for (const docSnap of docs) {
+    const closure = docSnap.data() || {};
+    const kind = financialClosureKind(closure);
+    let patch = null;
+    if (type === "gasto" && kind === "gastos") patch = financialExpenseClosurePatch(closure, movement);
+    if (type === "cobro" && financialIsBillingClosure(kind)) patch = financialBillingClosurePatch(closure, movement);
+    if ((type === "cobro" || type === "caja_chica") && kind === "caja_chica" && financialMethodOf(movement) === "cash") patch = financialCashboxClosurePatch(closure, movement);
+    if (!patch) continue;
+    const remainingIds = financialRemoveArrayItem(closure[includeField], documentId);
+    await docSnap.ref.set({
+      ...patch,
+      [includeField]:remainingIds,
+      includedCount:Math.max(0, Number(closure.includedCount || 0) - 1),
+      adminAdjusted:true,
+      adminAdjustedReason:type === "caja_chica" ? "Caja chica excluida manualmente" : "Movimiento eliminado manualmente",
+      adminAdjustedAt:FieldValue.serverTimestamp(),
+      adminAdjustedAtMs:Date.now(),
+      adminAdjustedByUid:adminUid,
+      updatedAt:FieldValue.serverTimestamp(),
+      updatedAtMs:Date.now(),
+      version:"v4017-admin-delete-financial"
+    }, { merge:true });
+    adjusted += 1;
+  }
+  return adjusted;
+}
+
+exports.adminDeleteFinancialMovement = onCall({ region:"southamerica-east1", timeoutSeconds:180, memory:"512MiB" }, async request => {
+  const adminUid = await assertAdmin(request);
+  const type = normalized(request.data?.type);
+  const documentId = text(request.data?.documentId);
+  const driverUid = text(request.data?.driverUid);
+  const reason = text(request.data?.reason || "Borrado manual desde panel administrador").slice(0, 280);
+  if (!documentId || !driverUid) throw new HttpsError("invalid-argument", "Falta chofer o movimiento.");
+  if (!["cobro", "gasto", "caja_chica"].includes(type)) throw new HttpsError("invalid-argument", "Tipo de movimiento no permitido.");
+
+  const collectionName = type === "gasto" ? "gastos" : "billing_records";
+  const ref = db.collection(collectionName).doc(documentId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "El movimiento ya no existe en Firestore.");
+  const data = snap.data() || {};
+  if (!financialBelongsToDriver(data, driverUid)) throw new HttpsError("permission-denied", "El movimiento no pertenece al chofer seleccionado.");
+  if (type === "caja_chica" && financialMethodOf(data) !== "cash") throw new HttpsError("failed-precondition", "Solo los cobros en efectivo generan caja chica.");
+
+  const auditRef = db.collection(ADMIN_AUDIT_COLLECTION).doc(`financial_delete_${Date.now()}_${documentId}`);
+  const counters = { deletedFiles:0 };
+  const closuresAdjusted = await financialAdjustClosures({ type, driverUid, documentId, movement:data, adminUid });
+
+  if (type === "caja_chica") {
+    await ref.set({
+      excludeFromCashbox:true, cashboxExcluded:true, cajaChicaEliminada:true,
+      cajaChicaEliminadaAt:FieldValue.serverTimestamp(), cajaChicaEliminadaAtMs:Date.now(),
+      cajaChicaEliminadaByUid:adminUid,
+      cajaChicaEliminadaReason:reason,
+      updatedAt:FieldValue.serverTimestamp(), updatedAtMs:Date.now(), updatedByUid:adminUid
+    }, { merge:true });
+  } else {
+    await deleteStorageForDocument(data, counters).catch(error => console.warn("[admin financial delete] storage skip", error?.code || error?.message || error));
+    await ref.delete();
+  }
+
+  await auditRef.set({
+    action:"admin_delete_financial_movement", type, collectionName, documentId, driverUid,
+    adminUid, reason, amount:financialAmountOf(data), method:financialMethodOf(data), closuresAdjusted,
+    deletedFiles:counters.deletedFiles || 0, createdAt:FieldValue.serverTimestamp(), createdAtMs:Date.now()
+  }, { merge:true }).catch(() => {});
+  return { ok:true, type, collectionName, documentId, driverUid, closuresAdjusted, deletedFiles:counters.deletedFiles || 0 };
+});
+
+
+// ============================================================================
 // RÉCORD PERSONAL — autoridad del servidor
 // ============================================================================
 const PERSONAL_RECORD_TIMEZONE = "America/Argentina/Cordoba";
