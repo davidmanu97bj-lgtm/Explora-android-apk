@@ -1,4 +1,4 @@
-/* EXPLORA · Pago Home v27 · actualizar manual sin pull refresh */
+/* EXPLORA · Pago Home v28 · legacy cleanup ranking/cierre semanal/km */
 :root{
   --pay-gold:#e9bf45;
   --pay-gold-2:#f4d857;
@@ -13,6 +13,20 @@
   --pay-shadow:0 16px 34px rgba(25,28,40,.10);
   --pay-font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Inter","Segoe UI",Roboto,Arial,sans-serif;
 }
+
+/* Limpieza quirúrgica: módulos legacy desactivados en la nueva versión a demanda. */
+body.explora-legacy-clean #weeklyRankingLive,
+body.explora-legacy-clean #performanceScreen,
+body.explora-legacy-clean #performanceGoalViewport,
+body.explora-legacy-clean #weeklyClosureOverlay,
+body.explora-legacy-clean #mileageClosureCard,
+body.explora-legacy-clean #mileageDashboardCard,
+body.explora-legacy-clean #mileageAdminAlertsCard{
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+
 body.explora-pay-mode{
   background:var(--pay-bg)!important;
   color:var(--pay-ink);
