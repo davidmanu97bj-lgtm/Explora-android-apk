@@ -1,7 +1,7 @@
-/* Compatibilidad validada: v4016-card-alerts */
+/* Compatibilidad validada: v4017-admin-delete-financial */
 /* EXPLORA PWA service worker · v2.5.2 */
 const CACHE_PREFIX = 'explora-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v4016-card-alerts`;
+const CACHE_NAME = `${CACHE_PREFIX}v4017-admin-delete-financial`;
 
 const LEGACY_MILEAGE_STUB = `
 const noop=()=>{};const asyncTrue=async()=>true;
@@ -26,7 +26,7 @@ const APP_SHELL = [
   './js/segments/01-script.js?v2442-weekly-payment-production',
   './js/segments/19-script.mjs?v2442-weekly-payment-production',
   './js/segments/39-script.mjs?v=4016-card-alerts',
-  './js/segments/11-script.mjs?v4016-card-alerts',
+  './js/segments/11-script.mjs?v4017-admin-delete-financial',
   './js/core/weekly-core.mjs?v2442-weekly-payment-production',
   './css/segments/45-style.css?v=2440-weekly-closure-cash-record-recovery',
   './css/segments/44-style.css?v=2503-more-white-exit',
