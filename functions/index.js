@@ -111,18 +111,10 @@ async function disableAndDeleteAuthUser(uid) {
 async function assertAdmin(request) {
   const callerUid = text(request.auth?.uid);
   if (!callerUid) throw new HttpsError("unauthenticated", "Debes iniciar sesión.");
-  const tokenRole = normalized(request.auth?.token?.role || request.auth?.token?.rol);
-  if (ADMIN_UIDS.has(callerUid) || ADMIN_ROLES.has(tokenRole)) return callerUid;
-
-  for (const collectionName of ADMIN_PROFILE_COLLECTIONS) {
-    const snap = await db.collection(collectionName).doc(callerUid).get().catch(() => null);
-    if (!snap?.exists) continue;
-    const data = snap.data() || {};
-    if (data.active === false || data.activo === false || data.isDeleted === true) break;
-    const role = normalized(data.role || data.rol);
-    if (ADMIN_ROLES.has(role)) return callerUid;
-  }
-  throw new HttpsError("permission-denied", "Sólo el administrador puede realizar esta acción.");
+  // Regla dura v4015: ningún documento, rol viejo ni custom claim convierte a un chofer en Admin.
+  // Sólo el UID oficial de David puede ejecutar altas/bajas administrativas.
+  if (ADMIN_UIDS.has(callerUid)) return callerUid;
+  throw new HttpsError("permission-denied", "Sólo el administrador oficial puede realizar esta acción.");
 }
 
 function collectAliases(driverId, data = {}) {
@@ -142,9 +134,8 @@ function classifyDocument(data = {}, aliases) {
   const sharedValues = SHARED_PARTICIPANT_FIELDS.map(field => normalized(data[field])).filter(Boolean);
   const hasOtherParticipant = sharedValues.some(value => !aliases.has(value) && value !== "deleted-driver");
 
-  if (matchedSharedFields.length && hasOtherParticipant) {
-    return { action: "anonymize", matchedSharedFields, matchedMetadataFields, matchedWeakFields };
-  }
+  // Borrado total de chofer v4015: si el chofer participa como dueño o participante,
+  // el documento se elimina para que no vuelva a aparecer en selectores, cierres o actividad.
   if (matchedOwnerFields.length || matchedSharedFields.length) {
     return { action: "delete", matchedSharedFields, matchedMetadataFields, matchedWeakFields };
   }
@@ -310,17 +301,30 @@ async function deleteLoginAliases(aliases, counters) {
   }
 }
 
+async function deleteAdminAuditEntries(aliases, counters) {
+  const snapshot = await db.collection(ADMIN_AUDIT_COLLECTION).get().catch(() => null);
+  if (!snapshot) return;
+  for (const auditDoc of snapshot.docs) {
+    const data = auditDoc.data() || {};
+    const identityValues = [auditDoc.id, data.targetUid, data.targetUsername, data.targetEmail, data.driverId, data.authUid, data.username, data.usuario, data.email];
+    if (!identityValues.some(value => matchAlias(value, aliases))) continue;
+    await db.recursiveDelete(auditDoc.ref);
+    counters.deletedDocuments += 1;
+  }
+}
+
 async function deleteLegacyProfiles(aliases, primaryDriverId, counters) {
-  for (const collectionName of ["usuarios", "users"]) {
+  for (const collectionName of ["choferes", "usuarios", "users", "perfiles"]) {
     const snapshot = await db.collection(collectionName).get().catch(() => null);
     if (!snapshot) continue;
     for (const profileDoc of snapshot.docs) {
       const data = profileDoc.data() || {};
       const role = normalized(data.role || data.rol);
-      if (ADMIN_ROLES.has(role)) continue;
-      const values = [profileDoc.id, data.uid, data.authUid, data.driverUid, data.driverId, data.choferUid, data.choferId, data.profileId, data.usuario, data.username, data.email];
+      const authUid = text(data.authUid || data.uid || profileDoc.id);
+      if (ADMIN_ROLES.has(role) || ADMIN_UIDS.has(authUid) || ADMIN_UIDS.has(profileDoc.id)) continue;
+      const values = [profileDoc.id, data.uid, data.authUid, data.firebaseUid, data.userId, data.driverUid, data.driverId, data.choferUid, data.choferId, data.profileId, data.usuario, data.username, data.usuarioNormalizado, data.email, data.authEmail, data.contactEmail, data.correo, data.nombre, data.nombreCompleto];
       if (!values.some(value => matchAlias(value, aliases))) continue;
-      if (profileDoc.id === primaryDriverId && collectionName === "choferes") continue;
+      if (collectionName === "choferes" && profileDoc.id === primaryDriverId) continue;
       await deleteStorageForDocument(data, counters);
       await db.recursiveDelete(profileDoc.ref);
       counters.deletedDocuments += 1;
@@ -336,13 +340,17 @@ exports.adminCreateDriver = onCall({ region: "southamerica-east1", timeoutSecond
   const requestedEmail = normalized(request.data?.email);
   const email = requestedEmail || legacyEmailFromLogin(username);
   const phone = text(request.data?.phone);
+  const cuit = text(request.data?.cuit);
+  const alias = normalized(request.data?.alias);
+  const role = normalized(request.data?.role || "chofer");
   const vehicleId = text(request.data?.vehicleId);
   const allowReassign = request.data?.allowReassign === true;
 
   if (!nombre || nombre.length > 100) throw new HttpsError("invalid-argument", "El nombre es obligatorio y debe tener hasta 100 caracteres.");
+  if (role !== "chofer" && role !== "driver") throw new HttpsError("invalid-argument", "El único rol permitido desde este panel es chofer.");
   if (!isValidUsername(username) || isReservedUsername(username)) throw new HttpsError("invalid-argument", "El ID de acceso no es válido o está reservado.");
   if (!isValidPassword(password)) throw new HttpsError("invalid-argument", "La contraseña debe tener entre 6 y 72 caracteres.");
-  if (!isValidEmail(email)) throw new HttpsError("invalid-argument", "El email no es válido.");
+  if (!isValidEmail(email)) throw new HttpsError("invalid-argument", "El email interno no es válido.");
 
   const aliasRef = db.collection("login_aliases").doc(username);
   if ((await aliasRef.get()).exists) throw new HttpsError("already-exists", "Ese ID de acceso ya está en uso.");
@@ -393,6 +401,7 @@ exports.adminCreateDriver = onCall({ region: "southamerica-east1", timeoutSecond
         usuario: username, username, usuarioNormalizado: username,
         rol: "chofer", role: "driver", email, authEmail: email,
         contactEmail: requestedEmail || "", telefono: phone, phone,
+        cuit: cuit || "", cuitFiscal: cuit || "", alias: alias || "", aliasCobro: alias || "",
         estado: "disponible", activo: true, active: true, status: "active", isDeleted: false,
         createdAt: now, createdByUid: adminUid, fechaAlta: dateInArgentina(), ultimaActividad: "sin registro",
         vehicleId: vehicleId || null, vehiculoId: vehicleId || null, assignedVehicleId: vehicleId || null,
@@ -490,6 +499,7 @@ exports.adminDeleteDriverCompletely = onCall({ region: "southamerica-east1", tim
     await unassignVehicles(aliases, adminUid, counters);
     await deleteLoginAliases(aliases, counters);
     await deleteLegacyProfiles(aliases, driverId, counters);
+    await deleteAdminAuditEntries(aliases, counters);
     await deleteStorageForDocument(driver, counters);
     await deleteFilesBySafePrefixes(aliases, counters);
 
@@ -503,15 +513,8 @@ exports.adminDeleteDriverCompletely = onCall({ region: "southamerica-east1", tim
     }
 
     const storedResult = { authUidHash: hashIdentity(authUid), ...counters };
-    await jobRef.set({
-      status: "completed", result: storedResult, completedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
-      authUid: FieldValue.delete(), targetSnapshot: FieldValue.delete(), driverId: FieldValue.delete()
-    }, { merge: true });
-    await db.collection(ADMIN_AUDIT_COLLECTION).doc(`delete_${jobId}`).set({
-      action: "admin_delete_driver", adminUid, targetHash: hashIdentity(`${driverId}|${authUid}`),
-      result: storedResult, completedAt: FieldValue.serverTimestamp(), status: "completed"
-    }, { merge: true });
-
+    // No dejamos documentos visibles de eliminación para que el chofer no vuelva a aparecer.
+    await jobRef.delete().catch(() => {});
     return { ok: true, driverId, ...storedResult };
   } catch (error) {
     const message = safeErrorMessage(error, "No se pudo completar la eliminación segura del chofer.");
