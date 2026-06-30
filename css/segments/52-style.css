@@ -1,4 +1,4 @@
-/* EXPLORA · Pago Home v28 · legacy cleanup ranking/cierre semanal/km */
+/* EXPLORA · Pago Home v29 · hard disable legacy ranking/cierre semanal/km */
 :root{
   --pay-gold:#e9bf45;
   --pay-gold-2:#f4d857;
@@ -19,6 +19,8 @@ body.explora-legacy-clean #weeklyRankingLive,
 body.explora-legacy-clean #performanceScreen,
 body.explora-legacy-clean #performanceGoalViewport,
 body.explora-legacy-clean #weeklyClosureOverlay,
+body.explora-legacy-clean #mileageOverlay,
+body.explora-legacy-clean .mileage-overlay,
 body.explora-legacy-clean #mileageClosureCard,
 body.explora-legacy-clean #mileageDashboardCard,
 body.explora-legacy-clean #mileageAdminAlertsCard{
@@ -51,6 +53,8 @@ body.explora-pay-mode .driver-welcome-real,
 body.explora-pay-mode .driver-status-real,
 body.explora-pay-mode .admin-command-center,
 body.explora-pay-mode #weeklyRankingLive,
+body.explora-pay-mode #mileageOverlay,
+body.explora-pay-mode .mileage-overlay,
 body.explora-pay-mode .performance-dashboard,
 body.explora-pay-mode .operations-real,
 body.explora-pay-mode .finance-real,
