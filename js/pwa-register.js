@@ -1,9 +1,9 @@
-/* EXPLORA PWA registration · v2.4.0 · admin delete financial */
+/* EXPLORA PWA registration · v2.4.0 · admin delete action fix */
 (() => {
   'use strict';
   if (!('serviceWorker' in navigator)) return;
 
-  const BUILD = 'v4017-admin-delete-financial';
+  const BUILD = 'v4018-admin-delete-action-fix';
   const reloadOnceKey = `explora-sw-reload-${BUILD}`;
 
   const clearLegacyCaches = async () => {
@@ -21,7 +21,7 @@
   const register = async () => {
     try {
       await clearLegacyCaches();
-      const registration = await navigator.serviceWorker.register('./service-worker.js?build=v4017-admin-delete-financial', {
+      const registration = await navigator.serviceWorker.register('./service-worker.js?build=v4018-admin-delete-action-fix', {
         scope: './',
         updateViaCache: 'none'
       });
