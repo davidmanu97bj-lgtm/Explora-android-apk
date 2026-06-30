@@ -9,7 +9,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     ranking:true, dailyRanking:true, derivationRanking:true, weeklyClosure:true, weeklyMileage:true
   });
 
-  const VERSION = "explora-pago-home-v44-card-order-alerts";
+  const VERSION = "explora-pago-home-v45-admin-delete-financial";
   const AR_TZ = "America/Argentina/Cordoba";
   const EXPLORA_WHATSAPP = "5493757461564";
   const EXPLORA_WHATSAPP_DISPLAY = "+5493757461564";
@@ -49,6 +49,9 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     tabAlertScope:"",
     tabAlertLoadedAt:0,
     efficiency:{ loadedAt:0, loading:false, error:"" },
+    adminDeleteOpen:false,
+    adminDeleteMessage:"",
+    adminDeleteBusy:false,
     busy:false,
     refreshing:false
   };
@@ -150,6 +153,15 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
 
   function paymentLabel(method) {
     return ({ cash:"Cobro efectivo", transfer:"Cobro transferencia", card:"Cobro tarjeta", qr:"Cobro QR" })[method] || "Cobro";
+  }
+
+  function movementIsDeleted(row = {}) {
+    const status = safe(row.status || row.estado || row.state || row.deletionStatus).toLowerCase();
+    return row.deleted === true || row.isDeleted === true || row.eliminado === true || /deleted|eliminado|borrado|anulado/.test(status);
+  }
+
+  function cashboxIsExcluded(row = {}) {
+    return row.excludeFromCashbox === true || row.cashboxExcluded === true || row.cajaChicaEliminada === true || row.ignoreCashbox === true || row.noCashbox === true;
   }
 
   function activeClosureKind(kind = state.tab) {
@@ -296,7 +308,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
   }
 
   function tabAlertStorageKey(uid = tabAlertScopeUid()) {
-    return `explora:pay-home:card-alerts:v4016:${uid || "anon"}`;
+    return `explora:pay-home:card-alerts:v4017:${uid || "anon"}`;
   }
 
   function normalizeTabAlertCounts(counts = {}) {
@@ -563,6 +575,18 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
         <button class="pay-nav-btn" id="payNavClosure" type="button"><svg viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7z"></path><path d="M14 3v5h5"></path><path d="M9 14h6M9 17h4"></path></svg><span>Cierre</span></button>
         <button class="pay-nav-btn" data-pay-nav="mas" type="button"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"></path><path d="M18 17h2M19 16v2"></path></svg><span>Más</span></button>
       </nav>
+      <div class="pay-admin-delete-backdrop" id="payAdminDeleteBackdrop" aria-hidden="true">
+        <section class="pay-admin-delete-modal" role="dialog" aria-modal="true" aria-labelledby="payAdminDeleteTitle">
+          <header>
+            <div><h2 id="payAdminDeleteTitle">Borrar movimientos</h2><p>Cobros, caja chica y gastos. El cierre se ajusta automáticamente.</p></div>
+            <button class="pay-admin-delete-close" id="payAdminDeleteClose" type="button" aria-label="Cerrar">×</button>
+          </header>
+          <div class="pay-admin-delete-warning">Acción solo para administrador. Se modifica Firestore y se recalculan los cierres relacionados.</div>
+          <div class="pay-admin-delete-message" id="payAdminDeleteMessage" role="status"></div>
+          <div class="pay-admin-delete-list" id="payAdminDeleteList"></div>
+          <div class="pay-admin-delete-actions"><button id="payAdminDeleteCancel" type="button">Volver</button></div>
+        </section>
+      </div>
       <div class="pay-efficiency-backdrop" id="payEfficiencyBackdrop" aria-hidden="true">
         <section class="pay-efficiency-modal" role="dialog" aria-modal="true" aria-labelledby="payEfficiencyTitle">
           <header><div><h2 id="payEfficiencyTitle">Eficiencia operativa</h2><p>Comparación contra tu propio historial.</p></div><button class="pay-efficiency-close" id="payEfficiencyClose" type="button" aria-label="Cerrar">×</button></header>
@@ -736,6 +760,14 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     $("payMoreBack")?.addEventListener("click", () => showPayView("inicio"));
     $("payNotificationsBack")?.addEventListener("click", () => showPayView("inicio"));
     $("payNotificationsSettings")?.addEventListener("click", () => showPayView("mas"));
+    $("payAdminDeleteClose")?.addEventListener("click", closeAdminDeleteModal);
+    $("payAdminDeleteCancel")?.addEventListener("click", closeAdminDeleteModal);
+    $("payAdminDeleteBackdrop")?.addEventListener("click", event => { if (event.target?.id === "payAdminDeleteBackdrop") closeAdminDeleteModal(); });
+    $("payAdminDeleteList")?.addEventListener("click", event => {
+      const button = event.target?.closest?.("[data-pay-admin-delete]");
+      if (!button) return;
+      submitAdminDeleteMovement(button.dataset.payAdminDelete, button.dataset.payAdminDeleteType).catch(error => setAdminDeleteMessage(error?.message || "No se pudo borrar el movimiento.", "error"));
+    });
     $("payNotificationList")?.addEventListener("click", event => {
       const button = event.target.closest("[data-pay-notification-closure]");
       if (!button) return;
@@ -755,14 +787,23 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
         openDriverProfileModal();
         return;
       }
+      if (action === "admin-delete-movements") {
+        openAdminDeleteModal();
+        return;
+      }
       showPayView("inicio");
       runExistingAction(action);
     });
     $("payMoreAdminList")?.addEventListener("click", event => {
       const button = event.target.closest("[data-pay-more-action]");
       if (!button) return;
+      const action = safe(button.dataset.payMoreAction);
+      if (action === "admin-delete-movements") {
+        openAdminDeleteModal();
+        return;
+      }
       showPayView("inicio");
-      runExistingAction(button.dataset.payMoreAction);
+      runExistingAction(action);
     });
   }
 
@@ -818,6 +859,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
   function adminMoreItems() {
     return [
       { title:"Chofer", detail:"Crear o eliminar", action:"admin-choferes", icon:"users" },
+      { title:"Borrar movimientos", detail:"Cobros, caja chica y gastos", action:"admin-delete-movements", icon:"trash" },
       { title:"Cierres", detail:"Comprobantes y pagos pendientes", action:"admin-cierres", icon:"receipt" },
       { title:"Gastos", detail:"Gastos cargados por choferes", action:"admin-gastos", icon:"wallet" },
       { title:"Multas", detail:"Multas, choques y deudas", action:"admin-multas", icon:"alert" }
@@ -832,9 +874,119 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       loan:'<path d="M4 7h16v12H4z"></path><path d="M4 10h16"></path><path d="M8 15h4"></path>',
       receipt:'<path d="M7 3h10v18l-2-1-2 1-2-1-2 1-2-1Z"></path><path d="M9 8h6M9 12h6M9 16h4"></path>',
       users:'<path d="M16 21a6 6 0 0 0-12 0"></path><circle cx="10" cy="8" r="4"></circle><path d="M22 21a5 5 0 0 0-5-5"></path><path d="M17 4a4 4 0 0 1 0 8"></path>',
-      wallet:'<path d="M4 7.5h14.5A1.5 1.5 0 0 1 20 9v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11"></path><path d="M16 12h5v4h-5a2 2 0 0 1 0-4Z"></path>'
+      wallet:'<path d="M4 7.5h14.5A1.5 1.5 0 0 1 20 9v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11"></path><path d="M16 12h5v4h-5a2 2 0 0 1 0-4Z"></path>',
+      trash:'<path d="M4 7h16"></path><path d="M10 11v6M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path>'
     };
     return `<svg viewBox="0 0 24 24">${icons[name] || icons.user}</svg>`;
+  }
+
+  function adminDeleteRows(summary = state.latestSummary || computeSummary()) {
+    if (!isAdmin()) return [];
+    const rows = [];
+    const billing = summary.billingRecords || summary.records || [];
+    for (const row of billing) {
+      const id = safe(row.id || row.recordId || row.billingRecordId);
+      const amount = amountOf(row), method = methodOf(row), at = rowMs(row);
+      if (!id || !(amount > 0)) continue;
+      rows.push({
+        id, type:"cobro", icon:"+", title:`${dateShort(at)} · Borrar cobro`,
+        meta:paymentLabel(method), detail:`Elimina el cobro de Firestore y ajusta Chofer/Explora${method === "cash" ? " + caja chica" : ""}.`, amount
+      });
+      if (method === "cash" && !cashboxIsExcluded(row)) {
+        rows.push({
+          id, type:"caja_chica", icon:"🛎️", title:`${dateShort(at)} · Borrar caja chica`,
+          meta:"Caja chica 5% generada por efectivo", detail:"Mantiene el cobro efectivo, pero lo excluye de caja chica y ajusta su cierre.", amount:amount * .05
+        });
+      }
+    }
+    for (const row of summary.expenses || []) {
+      const id = safe(row.id || row.expenseId || row.gastoId);
+      const amount = amountOf(row), at = rowMs(row);
+      if (!id || !(amount > 0)) continue;
+      rows.push({
+        id, type:"gasto", icon:"−", title:`${dateShort(at)} · Borrar gasto`,
+        meta:expenseTypeLabel(row), detail:"Elimina el gasto de Firestore y ajusta el cierre de gastos.", amount
+      });
+    }
+    return rows.sort((a,b)=>b.id.localeCompare(a.id)).slice(0, 120);
+  }
+
+  function setAdminDeleteMessage(message = "", tone = "") {
+    state.adminDeleteMessage = safe(message);
+    const box = $("payAdminDeleteMessage");
+    if (!box) return;
+    box.textContent = state.adminDeleteMessage;
+    box.classList.toggle("is-ok", tone === "ok");
+    box.classList.toggle("is-error", tone === "error");
+  }
+
+  function renderAdminDeleteModal() {
+    const list = $("payAdminDeleteList");
+    if (!list) return;
+    if (!isAdmin()) {
+      list.innerHTML = `<div class="pay-admin-delete-empty">Esta opción es solo para administrador.</div>`;
+      return;
+    }
+    if (!getDriverUid()) {
+      list.innerHTML = `<div class="pay-admin-delete-empty">Primero seleccioná un chofer en el inicio.</div>`;
+      return;
+    }
+    const rows = adminDeleteRows(state.latestSummary || computeSummary());
+    if (!rows.length) {
+      list.innerHTML = `<div class="pay-admin-delete-empty">No hay cobros, caja chica ni gastos abiertos para borrar en este chofer.</div>`;
+      return;
+    }
+    list.innerHTML = rows.map(row => `
+      <article class="pay-admin-delete-row">
+        <span class="pay-admin-delete-icon">${esc(row.icon)}</span>
+        <div class="pay-admin-delete-copy"><strong>${esc(row.title)}</strong><small>${esc(row.meta)} · ${currency(row.amount)}</small><em>${esc(row.detail)}</em></div>
+        <button data-pay-admin-delete="${esc(row.id)}" data-pay-admin-delete-type="${esc(row.type)}" type="button" ${state.adminDeleteBusy ? "disabled" : ""}>Borrar</button>
+      </article>
+    `).join("");
+  }
+
+  function openAdminDeleteModal() {
+    if (!isAdmin()) return;
+    showPayView("inicio");
+    state.adminDeleteOpen = true;
+    state.adminDeleteMessage = "";
+    $("payAdminDeleteBackdrop")?.classList.add("is-open");
+    $("payAdminDeleteBackdrop")?.setAttribute("aria-hidden", "false");
+    renderAdminDeleteModal();
+    setAdminDeleteMessage(getDriverUid() ? `Chofer seleccionado: ${state.selectedDriverName || "sin nombre"}.` : "Seleccioná un chofer antes de borrar.", getDriverUid() ? "" : "error");
+  }
+
+  function closeAdminDeleteModal() {
+    state.adminDeleteOpen = false;
+    state.adminDeleteBusy = false;
+    $("payAdminDeleteBackdrop")?.classList.remove("is-open");
+    $("payAdminDeleteBackdrop")?.setAttribute("aria-hidden", "true");
+  }
+
+  async function submitAdminDeleteMovement(documentId = "", type = "") {
+    if (!isAdmin()) throw new Error("Solo el administrador puede borrar movimientos.");
+    const uid = getDriverUid();
+    if (!uid) throw new Error("Seleccioná un chofer antes de borrar.");
+    const cleanType = safe(type);
+    const label = cleanType === "caja_chica" ? "la caja chica" : cleanType === "gasto" ? "el gasto" : "el cobro";
+    const ok = window.confirm(`¿Borrar ${label}?\n\nEsta acción modifica Firestore y recalcula los cierres relacionados.`);
+    if (!ok) return;
+    state.adminDeleteBusy = true;
+    renderAdminDeleteModal();
+    setAdminDeleteMessage("Borrando y ajustando cierre…");
+    try {
+      const fb = window.ExploraFirebase || {};
+      if (!fb.functions || !fb.httpsCallable) throw new Error("Cloud Functions no está disponible. Subí functions/index.js y desplegá funciones.");
+      const callable = fb.httpsCallable(fb.functions, "adminDeleteFinancialMovement", { timeout: 180000 });
+      const response = await callable({ type:cleanType, documentId:safe(documentId), driverUid:uid, reason:"Borrado manual desde panel administrador" });
+      const result = response?.data || {};
+      setAdminDeleteMessage(`Listo. Cierres ajustados: ${number(result.closuresAdjusted || 0)}.`, "ok");
+      await refreshOpenData("admin-delete-financial-movement");
+      renderAdminDeleteModal();
+    } finally {
+      state.adminDeleteBusy = false;
+      renderAdminDeleteModal();
+    }
   }
 
   function renderMoreScreen() {
@@ -2210,15 +2362,15 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     const resetExpensesMs = lastClosureMs(closures, "gastos");
     const resetCashboxMs = lastClosureMs(closures, "caja_chica");
 
-    const billingRecords = records.filter(row => rowMs(row) > resetBillingMs).sort((a,b)=>rowMs(b)-rowMs(a));
+    const billingRecords = records.filter(row => !movementIsDeleted(row) && rowMs(row) > resetBillingMs).sort((a,b)=>rowMs(b)-rowMs(a));
     const cashRecords = billingRecords.filter(row => methodOf(row) === "cash");
     const exploraRecords = billingRecords.filter(row => methodOf(row) !== "cash");
     // Caja chica es módulo independiente y SOLO se genera por cobros en efectivo.
     // Cobros digitales (transferencia/QR/tarjeta) no generan ni descuentan caja chica.
-    const cashboxRecords = records.filter(row => rowMs(row) > resetCashboxMs && methodOf(row) === "cash").sort((a,b)=>rowMs(b)-rowMs(a));
+    const cashboxRecords = records.filter(row => !movementIsDeleted(row) && !cashboxIsExcluded(row) && rowMs(row) > resetCashboxMs && methodOf(row) === "cash").sort((a,b)=>rowMs(b)-rowMs(a));
     const cashboxCashRecords = cashboxRecords;
     const cashboxExploraRecords = [];
-    const filteredExpenses = expenses.filter(row => rowMs(row) > resetExpensesMs).sort((a,b)=>rowMs(b)-rowMs(a));
+    const filteredExpenses = expenses.filter(row => !movementIsDeleted(row) && rowMs(row) > resetExpensesMs).sort((a,b)=>rowMs(b)-rowMs(a));
 
     const cashboxRate = .05;
     let cashGrossInDriver = 0, nonCashGrossInExplora = 0;
@@ -2485,6 +2637,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       setBottomNavActive("inicio");
     }
     if ($("payClosureBackdrop")?.classList.contains("is-open")) renderClosureModal();
+    if ($("payAdminDeleteBackdrop")?.classList.contains("is-open")) renderAdminDeleteModal();
   }
 
   function pendingValueForTab(closure = {}, kind = state.tab) {
