@@ -1,13 +1,12 @@
-/* Compatibilidad validada: v4011-whatsapp-nativo */
+/* Compatibilidad validada: v4012-legacy-cleanup */
 /* EXPLORA PWA service worker · v2.5.1 */
 const CACHE_PREFIX = 'explora-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v4011-whatsapp-nativo`;
+const CACHE_NAME = `${CACHE_PREFIX}v4012-legacy-cleanup`;
 const APP_SHELL = [
   './',
   './index.html',
   './css/segments/46-style.css',
   './css/segments/47-style.css?v=2411-logo',
-  './css/segments/48-style.css?v=2412-ranking-mobile',
   './css/segments/07-style.css?v=3921-billing-visual-fix',
   './js/segments/09-script.js',
   './js/segments/07-script.js?v=3921-billing-visual-fix',
@@ -15,23 +14,16 @@ const APP_SHELL = [
   './css/segments/32-style.css?v=2445-finance-nav-fix',
   './css/segments/38-style.css?v=2445-finance-nav-fix',
   './js/segments/01-script.js?v2442-weekly-payment-production',
-  './js/segments/18-script.mjs?v2442-weekly-payment-production',
   './js/segments/19-script.mjs?v2442-weekly-payment-production',
   './js/segments/11-script.mjs?v3911-logo-real-header',
-  './js/segments/35-script.mjs?v2442-weekly-payment-production',
   './js/core/weekly-core.mjs?v2442-weekly-payment-production',
   './css/segments/45-style.css?v=2440-weekly-closure-cash-record-recovery',
   './css/segments/44-style.css?v=2503-more-white-exit',
-  './js/segments/43-script.mjs?v2442-weekly-payment-production',
-  './css/segments/49-style.css?v=2456-personal-record-server-authoritative',
   './css/segments/50-style.css?v=2458-admin-driver-production-safe',
-  './css/segments/51-style.css?v=2484-weekly-mileage-modal-ux',
   './css/segments/02-style.css?v=3911-logo-real-header',
-  './css/segments/52-style.css?v=4011-whatsapp-nativo',
-  './js/segments/52-script.mjs?v=4011-whatsapp-nativo',
+  './css/segments/52-style.css?v=4012-legacy-cleanup',
+  './js/segments/52-script.mjs?v=4012-legacy-cleanup',
   './assets/icono_eficiencia_km.png',
-  './js/segments/49-script.mjs?v=2488-mileage-close-fast',
-  './js/segments/49-mileage-model.mjs?v=2477-weekly-mileage-v15-admin-card-clickable',
   './js/segments/44-script.mjs?v=2456-personal-record-server-authoritative',
   './manifest.webmanifest?v=2411',
   './icons/favicon-v2411.svg',
@@ -104,3 +96,5 @@ self.addEventListener('message', (event) => {
 /* cache bump: v3921 billing visual fix */
 
 /* cache bump: v3924 billing modal solid background */
+
+/* cache bump: v4012 legacy cleanup */

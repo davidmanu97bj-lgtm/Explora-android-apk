@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 
 <!--
-  Este documento usa el modo `daily-winners` para activar el carrusel de burbujas
-  con los ganadores diarios. La regla CSS que ocultaba las burbujas en este
-  modo se ha comentado en `css/segments/45-style.css`, por lo que el
-  carrusel permanecerá visible.
+  EXPLORA · Limpieza quirúrgica legacy
+  Ranking diario/semanal, cierre semanal automático y control semanal de KM
+  quedan desactivados. La app usa el Home de pagos y cierres a demanda.
 -->
-<html data-explora-build="2.5.1-pay-home" lang="es" data-performance-nav-mode="daily-winners">
+<html data-explora-build="2.5.2-pay-home-legacy-clean" lang="es" data-performance-nav-mode="disabled">
 <head>
 <meta charset="utf-8"/>
 <meta content="v2.5.8-logo-real-header" name="explora-version"/>
@@ -24,6 +23,25 @@
 <link href="icons/apple-touch-icon-v2411.png" rel="apple-touch-icon" sizes="180x180"/>
 <link href="icons/favicon-v2411.svg" rel="icon" type="image/svg+xml"/>
 <link href="icons/favicon-32-v2411.png" rel="icon" sizes="32x32" type="image/png"/>
+<script id="explora-legacy-modules-disabled">
+  window.EXPLORA_LEGACY_MODULES_DISABLED = Object.freeze({
+    ranking:true,
+    dailyRanking:true,
+    derivationRanking:true,
+    weeklyClosure:true,
+    weeklyMileage:true
+  });
+</script>
+<style id="explora-legacy-cleanup-hide">
+  .driver-status-real,
+  #weeklyRankingLive,
+  #performanceScreen,
+  #performanceGoalViewport,
+  #weeklyClosureOverlay,
+  #mileageClosureCard,
+  #mileageDashboardCard,
+  #mileageAdminAlertsCard{display:none!important;visibility:hidden!important;pointer-events:none!important;}
+</style>
 
 <link href="css/segments/01-style.css" rel="stylesheet"/>
 <link href="css/segments/02-style.css?v=3911-logo-real-header" rel="stylesheet"/>
@@ -56,7 +74,7 @@
 <link href="css/segments/29-style.css" rel="stylesheet"/>
 <link href="css/segments/30-style.css" rel="stylesheet"/>
 <link href="css/segments/31-style.css" rel="stylesheet"/>
-</meta></meta><meta content="modular-compatibility-layer-v1" name="explora-architecture"/><meta content="v2.4.43-weekly-production-integrity" name="explora-project-version"/></head>
+</meta></meta><meta content="modular-compatibility-layer-v1" name="explora-architecture"/><meta content="v2.5.2-pay-home-legacy-clean" name="explora-project-version"/></head>
 <body class="explora-auth-checking">
 <div aria-live="polite" class="explora-splash" id="exploraSplash" role="status">
 <div class="explora-splash-logo">
@@ -1240,8 +1258,8 @@
 <script id="exploraAdminDebtLaunchV190" src="js/segments/15-script.mjs?v=226" type="module"></script>
 <!-- EXPLORA v256 · derivaciones recibidas primero, pestañas separadas y flujo operativo estable -->
 <script id="exploraDerivationsModule" src="js/segments/16-script.mjs" type="module"></script>
-<script id="explora-derivation-ranking-stable-renderer" src="js/segments/17-script.js"></script>
-<script id="exploraPerformanceEngineV252" src="js/segments/18-script.mjs?v2442-weekly-payment-production" type="module"></script>
+<!-- legacy disabled: derivation ranking renderer / js/segments/17-script.js -->
+<!-- legacy disabled: ranking/performance engine / js/segments/18-script.mjs -->
 <script id="exploraAdminDriverSimulationV234" src="js/segments/19-script.mjs?v2442-weekly-payment-production" type="module"></script>
 <link href="css/segments/33-style.css" rel="stylesheet"/>
 <script id="exploraV191FormEnhancements" src="js/segments/21-script.js"></script>
@@ -1252,12 +1270,13 @@
 <!-- EXPLORA v259 · ADMIN → diagnóstico de identidad, proyecto, bucket y permiso list antes del reintento Storage -->
 <script id="exploraOperationalResetV259" src="js/segments/25-script.mjs" type="module"></script>
 <!-- EXPLORA v260 · performance snapshot monotónico, UID canónico y caché schema 260 -->
-<script id="exploraGlobalRankingIndependentAuthV275" src="js/segments/26-script.mjs" type="module"></script>
-<script id="explora-v270-derivation-financial-repair" src="js/segments/27-script.js"></script><script id="explora-v272-derivation-ranking-definitive-repair" src="js/segments/28-script.mjs" type="module"></script>
+<!-- legacy disabled: global ranking independent auth / js/segments/26-script.mjs -->
+<script id="explora-v270-derivation-financial-repair" src="js/segments/27-script.js"></script>
+<!-- legacy disabled: derivation ranking definitive repair / js/segments/28-script.mjs -->
 <link href="css/segments/34-style.css" rel="stylesheet"/>
 
 <script id="explora-sequential-validation-engine" src="js/segments/30-script.js"></script>
-<script id="explora-v278-dashboard-ranking-loan-definitive-js" src="js/segments/31-script.js"></script>
+<!-- legacy disabled: dashboard ranking cleanup / js/segments/31-script.js -->
 <script id="explora-vehicle-management-dashboard-js" src="js/segments/32-script.mjs?v=227" type="module"></script>
 <link href="css/segments/35-style.css" rel="stylesheet"/>
 <script id="explora-v280-vehicle-management-stability-fix" src="js/segments/33-script.js?v=227"></script>
@@ -1268,10 +1287,10 @@
 <script id="explora-v223-driver-incidents" src="js/segments/34-script.mjs?v=227" type="module"></script>
 <link href="css/segments/36-style.css" rel="stylesheet"/>
 <link href="css/segments/37-style.css" rel="stylesheet"/>
-<script id="explora-v220-unified-weekly-closure" src="js/segments/35-script.mjs?v2442-weekly-payment-production" type="module"></script>
-<script id="explora-v233-daily-ranking-weekly-plaques" src="js/segments/43-script.mjs?v2442-weekly-payment-production" type="module"></script>
+<!-- legacy disabled: weekly closure engine / js/segments/35-script.mjs -->
+<!-- legacy disabled: daily ranking and weekly plaques / js/segments/43-script.mjs -->
 <link href="css/segments/51-style.css?v=2484-weekly-mileage-modal-ux" rel="stylesheet"/>
-<script id="explora-weekly-mileage-v15-session-isolation" src="js/segments/49-script.mjs?v=2488-mileage-close-fast" type="module"></script>
+<!-- legacy disabled: weekly mileage control / js/segments/49-script.mjs -->
 <link href="css/segments/49-style.css?v=2456-personal-record-server-authoritative" rel="stylesheet"/>
 <link href="css/segments/50-style.css?v=2458-admin-driver-production-safe" rel="stylesheet"/>
 <script id="explora-personal-record-production-safe" src="js/segments/44-script.mjs?v=2456-personal-record-server-authoritative" type="module"></script>
@@ -1294,7 +1313,7 @@
 <div class="admin-billing-driver-field"><label>MEDIO DE PAGO</label><div class="admin-billing-driver-methods" id="adminBillingDriverMethods"><button class="admin-billing-driver-method is-selected" data-method="cash" type="button">EFECTIVO</button><button class="admin-billing-driver-method" data-method="transfer" type="button">TRANSFERENCIA</button><button class="admin-billing-driver-method" data-method="card" type="button">TARJETA</button></div></div>
 <div class="admin-billing-driver-field"><label for="adminBillingDriverDescription">DETALLE OPCIONAL</label><textarea id="adminBillingDriverDescription" maxlength="180" placeholder="Ej.: Aeropuerto a hotel"></textarea></div>
 <div class="admin-billing-driver-summary"><article><span>Semana operativa</span><strong id="adminBillingDriverPeriod">—</strong></article><article><span>Cargado por</span><strong>Administrador</strong></article></div>
-<div class="admin-billing-driver-note">El servicio se atribuye al chofer seleccionado y participa en su facturación, ranking diario y cierre semanal. El documento conserva la identidad del administrador que realizó la carga.</div>
+<div class="admin-billing-driver-note">El servicio se atribuye al chofer seleccionado y participa en su facturación y en el cierre a demanda vigente. El documento conserva la identidad del administrador que realizó la carga.</div>
 <button class="admin-billing-driver-submit" id="adminBillingDriverSubmit" type="button">REGISTRAR SERVICIO</button>
 <div aria-live="polite" class="admin-billing-driver-status" id="adminBillingDriverStatus"></div>
 </section>
@@ -1311,8 +1330,8 @@
 <script id="exploraGlobalClockAppWideSync" src="js/segments/42-script.js"></script>
 <link href="css/segments/47-style.css?v=2411-logo" rel="stylesheet"/>
 <link href="css/segments/48-style.css?v=2412-ranking-mobile" rel="stylesheet"/>
-<link href="css/segments/52-style.css?v=4011-whatsapp-nativo" rel="stylesheet"/>
-<script id="exploraPagoHomeOnDemandClosure" src="js/segments/52-script.mjs?v=4011-whatsapp-nativo" type="module"></script>
-<script defer="" id="explora-pwa-registration" src="js/pwa-register.js?v2443-weekly-production-integrity"></script>
+<link href="css/segments/52-style.css?v=4012-legacy-cleanup" rel="stylesheet"/>
+<script id="exploraPagoHomeOnDemandClosure" src="js/segments/52-script.mjs?v=4012-legacy-cleanup" type="module"></script>
+<script defer="" id="explora-pwa-registration" src="js/pwa-register.js?v4012-legacy-cleanup"></script>
 </body>
 </html>
