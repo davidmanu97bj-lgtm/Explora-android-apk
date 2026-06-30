@@ -1,4 +1,4 @@
-import { collection, query, where, limit, onSnapshot, getDocs, addDoc, doc, updateDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { collection, query, where, limit, onSnapshot, getDocs, getDoc, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
@@ -9,7 +9,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     ranking:true, dailyRanking:true, derivationRanking:true, weeklyClosure:true, weeklyMileage:true
   });
 
-  const VERSION = "explora-pago-home-v45-admin-delete-financial";
+  const VERSION = "explora-pago-home-v46-admin-delete-financial-fix";
   const AR_TZ = "America/Argentina/Cordoba";
   const EXPLORA_WHATSAPP = "5493757461564";
   const EXPLORA_WHATSAPP_DISPLAY = "+5493757461564";
@@ -52,6 +52,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     adminDeleteOpen:false,
     adminDeleteMessage:"",
     adminDeleteBusy:false,
+    adminDeleteBusyKey:"",
     busy:false,
     refreshing:false
   };
@@ -766,7 +767,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     $("payAdminDeleteList")?.addEventListener("click", event => {
       const button = event.target?.closest?.("[data-pay-admin-delete]");
       if (!button) return;
-      submitAdminDeleteMovement(button.dataset.payAdminDelete, button.dataset.payAdminDeleteType).catch(error => setAdminDeleteMessage(error?.message || "No se pudo borrar el movimiento.", "error"));
+      submitAdminDeleteMovement(button.dataset.payAdminDelete, button.dataset.payAdminDeleteType, button).catch(error => setAdminDeleteMessage(error?.message || "No se pudo borrar el movimiento.", "error"));
     });
     $("payNotificationList")?.addEventListener("click", event => {
       const button = event.target.closest("[data-pay-notification-closure]");
@@ -963,28 +964,232 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     $("payAdminDeleteBackdrop")?.setAttribute("aria-hidden", "true");
   }
 
-  async function submitAdminDeleteMovement(documentId = "", type = "") {
+  function adminDeleteScrollTop() {
+    const modal = document.querySelector(".pay-admin-delete-modal");
+    try { modal?.scrollTo?.({ top:0, behavior:"smooth" }); } catch (_) { if (modal) modal.scrollTop = 0; }
+  }
+
+  function adminDeleteOwnerValues(row = {}) {
+    return ["driverUid", "choferUid", "uid", "ownerUid", "driverId", "choferId", "userUid", "userId", "createdByUid", "ownerId", "conductorUid", "assignedDriverUid", "createdForUid", "profileId", "perfilId"]
+      .map(field => safe(row[field])).filter(Boolean);
+  }
+
+  function adminDeleteMovementBelongsToSelected(row = {}, uid = getDriverUid(), documentId = "") {
+    const target = safe(uid);
+    const id = safe(documentId || row.id || row.recordId || row.expenseId || row.gastoId);
+    if (!target || !id) return false;
+    if (adminDeleteOwnerValues(row).includes(target)) return true;
+    const loaded = [...(state.records || []), ...(state.expenses || [])].some(item => safe(item.id || item.recordId || item.expenseId || item.gastoId) === id);
+    if (loaded) return true;
+    const selectedName = safe(state.selectedDriverName || displayName()).toLowerCase();
+    const rowName = safe(row.driverName || row.choferNombre || row.nombreChofer || row.conductorNombre || row.name || row.nombre).toLowerCase();
+    return !!selectedName && !!rowName && selectedName === rowName;
+  }
+
+  function adminDeleteRemoveArrayItem(value, item) {
+    const target = safe(item);
+    return Array.isArray(value) ? value.map(safe).filter(v => v && v !== target) : [];
+  }
+
+  function adminDeleteExpenseParts(row = {}) {
+    const amount = amountOf(row);
+    const rawRate = Number(row.sharedRate ?? row.porcentajeCompartido ?? row.driverShareRate ?? row.porcentajeChofer);
+    const rate = Number.isFinite(rawRate) ? (rawRate > 1 ? rawRate / 100 : rawRate) : .5;
+    const driverPart = amount * Math.min(1, Math.max(0, rate || .5));
+    const exploraPart = Math.max(0, amount - driverPart);
+    return { amount, driverPart, exploraPart };
+  }
+
+  function adminDeleteBillingClosurePatch(closure = {}, movement = {}) {
+    const amount = amountOf(movement);
+    const method = methodOf(movement);
+    const oldCash = moneyNumber(closure.cashInDriver ?? closure.cashGrossInDriver ?? closure.driverActualCash);
+    const oldDigital = moneyNumber(closure.exploraCash ?? closure.nonCashInExplora ?? closure.nonCashGrossInExplora);
+    const cash = Math.max(0, oldCash - (method === "cash" ? amount : 0));
+    const digital = Math.max(0, oldDigital - (method === "cash" ? 0 : amount));
+    const gross = Math.max(0, cash + digital);
+    const share = gross * .5;
+    const netToDriver = share - cash;
+    return {
+      gross, grossBeforeCashbox:gross, cashInDriver:cash, cashGrossInDriver:cash,
+      exploraCash:digital, nonCashInExplora:digital, nonCashGrossInExplora:digital,
+      billingShareEach:share, driverShare:share, exploraShare:share, driverEntitlement:share, driverFinal:share,
+      netSettlementToDriver:netToDriver,
+      amountDueFromDriver:Math.max(0, -netToDriver), amountFromDriver:Math.max(0, -netToDriver),
+      amountDueToDriver:Math.max(0, netToDriver), amountToDriver:Math.max(0, netToDriver)
+    };
+  }
+
+  function adminDeleteCashboxClosurePatch(closure = {}, movement = {}) {
+    const amount = amountOf(movement);
+    const reduction = amount * .05;
+    const gross = Math.max(0, moneyNumber(closure.cashboxGross ?? closure.gross ?? closure.cashboxBase) - amount);
+    const total = Math.max(0, moneyNumber(closure.cashboxTotal ?? closure.mainTotal ?? closure.amountDueFromDriver) - reduction);
+    return {
+      gross, cashboxGross:gross, mainTotal:total,
+      cashboxTotal:total, cashboxInDriver:total, cashboxInExplora:0,
+      amountDueFromDriver:total, amountFromDriver:total,
+      amountDueToDriver:0, amountToDriver:0,
+      netSettlementToDriver:-total
+    };
+  }
+
+  function adminDeleteExpenseClosurePatch(closure = {}, movement = {}) {
+    const { amount, driverPart, exploraPart } = adminDeleteExpenseParts(movement);
+    const total = Math.max(0, moneyNumber(closure.expenseTotal ?? closure.mainTotal ?? closure.gross) - amount);
+    const oldDriver = moneyNumber(closure.driverExpenseShare);
+    const oldExplora = moneyNumber(closure.exploraExpenseShare ?? closure.amountDueToDriver);
+    const newDriver = Math.max(0, oldDriver - driverPart);
+    const newExplora = Math.max(0, oldExplora - exploraPart);
+    return {
+      expenseTotal:total, mainTotal:total, gross:total,
+      driverExpenseShare:newDriver, exploraExpenseShare:newExplora,
+      amountDueFromDriver:0, amountFromDriver:0,
+      amountDueToDriver:newExplora, amountToDriver:newExplora,
+      netSettlementToDriver:newExplora
+    };
+  }
+
+  async function adminDeleteRelatedClosures(driverUid = "", documentId = "", includeField = "includedBillingIds") {
+    const result = new Map();
+    const col = collection(state.db, "cierres_semanales");
+    try {
+      const direct = await getDocs(query(col, where(includeField, "array-contains", documentId), limit(250)));
+      direct.forEach(item => result.set(item.id, item));
+    } catch (error) {
+      console.warn("EXPLORA_ADMIN_DELETE_DIRECT_CLOSURE_INCLUDED_SKIP", includeField, error?.code || error?.message);
+    }
+    for (const field of ["driverUid", "choferUid", "uid", "driverId", "choferId"]) {
+      try {
+        const snap = await getDocs(query(col, where(field, "==", driverUid), limit(300)));
+        snap.forEach(item => {
+          const data = item.data() || {};
+          if (Array.isArray(data[includeField]) && data[includeField].map(safe).includes(documentId)) result.set(item.id, item);
+        });
+      } catch (_) {}
+    }
+    return [...result.values()];
+  }
+
+  async function adminDeleteAdjustClosuresDirect({ type, driverUid, documentId, movement }) {
+    const includeField = type === "gasto" ? "includedExpenseIds" : "includedBillingIds";
+    const docs = await adminDeleteRelatedClosures(driverUid, documentId, includeField);
+    let adjusted = 0;
+    for (const snap of docs) {
+      const closure = snap.data() || {};
+      const kind = activeClosureKind(closure.closureKind || closure.closureType || closure.payTab || closure.closeKind || closure.kind || closure.cierreTipo || closure.type || closure.category);
+      let patch = null;
+      if (type === "gasto" && kind === "gastos") patch = adminDeleteExpenseClosurePatch(closure, movement);
+      if (type === "cobro" && (kind === "chofer" || kind === "explora" || kind === "facturacion")) patch = adminDeleteBillingClosurePatch(closure, movement);
+      if ((type === "cobro" || type === "caja_chica") && kind === "caja_chica" && methodOf(movement) === "cash") patch = adminDeleteCashboxClosurePatch(closure, movement);
+      if (!patch) continue;
+      await updateDoc(doc(state.db, "cierres_semanales", snap.id), {
+        ...patch,
+        [includeField]:adminDeleteRemoveArrayItem(closure[includeField], documentId),
+        includedCount:Math.max(0, Number(closure.includedCount || 0) - 1),
+        adminAdjusted:true,
+        adminAdjustedReason:type === "caja_chica" ? "Caja chica excluida manualmente" : "Movimiento eliminado manualmente",
+        adminAdjustedAt:serverTimestamp(),
+        adminAdjustedAtMs:Date.now(),
+        adminAdjustedByUid:safe(state.user?.uid || window.ExploraSession?.authUser?.uid),
+        updatedAt:serverTimestamp(),
+        updatedAtMs:Date.now(),
+        version:VERSION
+      });
+      adjusted += 1;
+    }
+    return adjusted;
+  }
+
+  async function adminDeleteFinancialDirect({ type = "", documentId = "", driverUid = "" } = {}) {
+    if (!state.db) throw new Error("Firestore no está disponible.");
+    const collectionName = type === "gasto" ? "gastos" : "billing_records";
+    const movementRef = doc(state.db, collectionName, documentId);
+    const snap = await getDoc(movementRef);
+    if (!snap.exists()) throw new Error("El movimiento ya no existe en Firestore.");
+    const movement = { id:snap.id, ...snap.data() };
+    if (!adminDeleteMovementBelongsToSelected(movement, driverUid, documentId)) throw new Error("El movimiento no pertenece al chofer seleccionado.");
+    if (type === "caja_chica" && methodOf(movement) !== "cash") throw new Error("Solo los cobros en efectivo generan caja chica.");
+    const closuresAdjusted = await adminDeleteAdjustClosuresDirect({ type, driverUid, documentId, movement });
+    if (type === "caja_chica") {
+      await updateDoc(movementRef, {
+        excludeFromCashbox:true,
+        cashboxExcluded:true,
+        cajaChicaEliminada:true,
+        cajaChicaEliminadaAt:serverTimestamp(),
+        cajaChicaEliminadaAtMs:Date.now(),
+        cajaChicaEliminadaByUid:safe(state.user?.uid || window.ExploraSession?.authUser?.uid),
+        cajaChicaEliminadaReason:"Borrado manual desde panel administrador",
+        updatedAt:serverTimestamp(),
+        updatedAtMs:Date.now(),
+        updatedByUid:safe(state.user?.uid || window.ExploraSession?.authUser?.uid)
+      });
+    } else {
+      await deleteDoc(movementRef);
+    }
+    return { ok:true, direct:true, closuresAdjusted };
+  }
+
+  function adminDeleteCallableShouldFallback(error) {
+    const code = safe(error?.code || error?.details?.code).toLowerCase();
+    const message = safe(error?.message).toLowerCase();
+    return !code || code.includes("not-found") || code.includes("unavailable") || code.includes("deadline") || code.includes("internal") || code.includes("functions") || message.includes("not found") || message.includes("no está disponible") || message.includes("deadline") || message.includes("network");
+  }
+
+  function adminDeleteCanTryServerAfterDirect(error) {
+    const code = safe(error?.code).toLowerCase();
+    const message = safe(error?.message).toLowerCase();
+    return code.includes("permission") || code.includes("denied") || message.includes("permission") || message.includes("permisos") || message.includes("insufficient");
+  }
+
+  async function adminDeleteCallServerOrDirect(payload) {
+    try {
+      return await adminDeleteFinancialDirect(payload);
+    } catch (directError) {
+      const fb = window.ExploraFirebase || {};
+      if (!fb.functions || !fb.httpsCallable || !adminDeleteCanTryServerAfterDirect(directError)) throw directError;
+      console.warn("EXPLORA_ADMIN_DELETE_DIRECT_FALLBACK_TO_CALLABLE", directError?.code || directError?.message || directError);
+      const callable = fb.httpsCallable(fb.functions, "adminDeleteFinancialMovement", { timeout: 30000 });
+      const response = await callable({ ...payload, reason:"Borrado manual desde panel administrador" });
+      return { ...(response?.data || {}), direct:false };
+    }
+  }
+
+  async function submitAdminDeleteMovement(documentId = "", type = "", sourceButton = null) {
     if (!isAdmin()) throw new Error("Solo el administrador puede borrar movimientos.");
     const uid = getDriverUid();
     if (!uid) throw new Error("Seleccioná un chofer antes de borrar.");
     const cleanType = safe(type);
+    const cleanId = safe(documentId);
+    if (!cleanId) throw new Error("No se encontró el ID del movimiento.");
     const label = cleanType === "caja_chica" ? "la caja chica" : cleanType === "gasto" ? "el gasto" : "el cobro";
     const ok = window.confirm(`¿Borrar ${label}?\n\nEsta acción modifica Firestore y recalcula los cierres relacionados.`);
     if (!ok) return;
     state.adminDeleteBusy = true;
+    state.adminDeleteBusyKey = `${cleanType}:${cleanId}`;
+    if (sourceButton) {
+      sourceButton.disabled = true;
+      sourceButton.textContent = "Borrando…";
+    }
+    setAdminDeleteMessage("Borrando y ajustando cierre… No cierres esta pantalla.");
+    adminDeleteScrollTop();
     renderAdminDeleteModal();
-    setAdminDeleteMessage("Borrando y ajustando cierre…");
     try {
-      const fb = window.ExploraFirebase || {};
-      if (!fb.functions || !fb.httpsCallable) throw new Error("Cloud Functions no está disponible. Subí functions/index.js y desplegá funciones.");
-      const callable = fb.httpsCallable(fb.functions, "adminDeleteFinancialMovement", { timeout: 180000 });
-      const response = await callable({ type:cleanType, documentId:safe(documentId), driverUid:uid, reason:"Borrado manual desde panel administrador" });
-      const result = response?.data || {};
-      setAdminDeleteMessage(`Listo. Cierres ajustados: ${number(result.closuresAdjusted || 0)}.`, "ok");
+      const result = await adminDeleteCallServerOrDirect({ type:cleanType, documentId:cleanId, driverUid:uid });
       await refreshOpenData("admin-delete-financial-movement");
+      setAdminDeleteMessage(`Listo. Movimiento borrado. Cierres ajustados: ${number(result.closuresAdjusted || 0)}${result.direct ? " · modo Firestore directo" : ""}.`, "ok");
+      if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(35);
       renderAdminDeleteModal();
+      adminDeleteScrollTop();
+    } catch (error) {
+      const msg = error?.message || "No se pudo borrar el movimiento.";
+      setAdminDeleteMessage(msg, "error");
+      adminDeleteScrollTop();
+      window.alert(msg);
+      throw error;
     } finally {
       state.adminDeleteBusy = false;
+      state.adminDeleteBusyKey = "";
       renderAdminDeleteModal();
     }
   }
