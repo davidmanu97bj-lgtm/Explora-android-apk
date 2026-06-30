@@ -1,9 +1,9 @@
-/* EXPLORA PWA registration · v2.3.9 · card alerts */
+/* EXPLORA PWA registration · v2.4.0 · admin delete financial */
 (() => {
   'use strict';
   if (!('serviceWorker' in navigator)) return;
 
-  const BUILD = 'v4016-card-alerts';
+  const BUILD = 'v4017-admin-delete-financial';
   const reloadOnceKey = `explora-sw-reload-${BUILD}`;
 
   const clearLegacyCaches = async () => {
@@ -21,7 +21,7 @@
   const register = async () => {
     try {
       await clearLegacyCaches();
-      const registration = await navigator.serviceWorker.register('./service-worker.js?build=v4016-card-alerts', {
+      const registration = await navigator.serviceWorker.register('./service-worker.js?build=v4017-admin-delete-financial', {
         scope: './',
         updateViaCache: 'none'
       });
