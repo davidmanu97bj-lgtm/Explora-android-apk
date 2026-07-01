@@ -9,7 +9,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     ranking:true, dailyRanking:true, derivationRanking:true, weeklyClosure:true, weeklyMileage:true
   });
 
-  const VERSION = "explora-pago-home-v48-pendientes-deuda-independiente";
+  const VERSION = "explora-pago-home-v49-pendientes-ui-fix";
   const AR_TZ = "America/Argentina/Cordoba";
   const EXPLORA_WHATSAPP = "5493757461564";
   const EXPLORA_WHATSAPP_DISPLAY = "+5493757461564";
@@ -790,11 +790,28 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     }
   }
 
+  function setPendingActionMode(enabled = false) {
+    const actions = $("payClosureActionBtn")?.closest(".pay-actions");
+    actions?.classList.toggle("is-pending-mode", !!enabled);
+    document.querySelectorAll("[data-pay-run]").forEach(button => {
+      button.hidden = !!enabled;
+      button.setAttribute("aria-hidden", enabled ? "true" : "false");
+    });
+  }
+
+  function scrollActivePayTabIntoView() {
+    const active = document.querySelector(".pay-tab.is-active");
+    if (!active) return;
+    try { active.scrollIntoView({ behavior:"smooth", block:"nearest", inline:"center" }); }
+    catch (_) { active.scrollIntoView(false); }
+  }
+
   function bindShell() {
     document.querySelectorAll("[data-pay-tab]").forEach(button => button.addEventListener("click", () => {
       state.tab = button.dataset.payTab || "chofer";
       markTabAlertSeen(state.tab);
       render();
+      scrollActivePayTabIntoView();
     }));
     document.querySelectorAll("[data-pay-run]").forEach(button => button.addEventListener("click", () => runExistingAction(button.dataset.payRun)));
     $("payClosureActionBtn")?.addEventListener("click", () => {
@@ -2986,6 +3003,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       button.setAttribute("aria-selected", active ? "true" : "false");
     });
     renderTabAlerts();
+    setTimeout(scrollActivePayTabIntoView, 0);
     const greeting = $("payGreeting");
     if (greeting) greeting.textContent = isAdmin() ? (state.selectedDriverName ? `Chofer, ${displayName()}` : "Seleccionar chofer") : `Hola, ${displayName()}`;
     renderAdminDriverPicker();
@@ -3188,7 +3206,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     if (activeClosureKind(state.tab) === "pendientes") {
       const t = tabSummary(summary, "pendientes");
       main = t.remainingAmount || 0;
-      sub = "Deuda pendiente independiente. No modifica Explora, Chofer, Gastos ni Caja chica.";
+      sub = "Deuda independiente. No modifica Explora ni Chofer.";
       pill = main > 0 ? "Saldo actual pendiente" : "Sin deuda pendiente";
       pillValue = main;
       lines.push(
@@ -3268,6 +3286,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     const box = $("payClosureStatus"), text = $("payClosureStatusText"), action = $("payClosureActionBtn");
     const kind = activeClosureKind(state.tab);
     if (kind === "pendientes") {
+      setPendingActionMode(true);
       const pending = tabSummary(summary, "pendientes");
       const canPay = !isAdmin() && number(pending.remainingAmount || 0) > 0;
       if (action) {
@@ -3280,6 +3299,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       if (box) { box.hidden = true; box.style.display = "none"; }
       return;
     }
+    setPendingActionMode(false);
     const stateForButton = closureButtonState(kind, summary);
     if (action) {
       action.hidden = !stateForButton.visible;
