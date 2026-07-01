@@ -318,6 +318,17 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     return Math.max(ms(row.createdAt), ms(row.incidentDate), ms(row.fecha), Number(row.createdAtMs || 0), Number(row.incidentAtMs || 0), rowMs(row));
   }
 
+  function debtActivityId(row = {}) {
+    return safe(row.id || row.debtId || row.documentId || row.uid || "");
+  }
+
+  function debtHasAttachment(row = {}) {
+    if (!row) return false;
+    if (row.receiptUrl || row.comprobanteUrl || row.attachmentUrl || row.fileUrl || row.downloadUrl || row.url) return true;
+    const arrays = [row.attachments, row.files, row.receipts, row.comprobantes].filter(Array.isArray);
+    return arrays.some(arr => arr.some(entry => entry && (entry.url || entry.receiptUrl || entry.downloadUrl || entry.fileUrl)));
+  }
+
   function summarizePendingDebts(rows = state.debts) {
     const normalized = (Array.isArray(rows) ? rows : []).filter(debtIsActive).sort((a,b)=>debtCreatedMs(a)-debtCreatedMs(b));
     const totalOriginal = normalized.reduce((sum,row)=>sum + debtTotalAmount(row), 0);
@@ -2954,14 +2965,18 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       });
     }
 
-    for (const row of summarizePendingDebts(state.debts).activeDebts || []) {
+    const activeDebtRows = summarizePendingDebts(state.debts).activeDebts || [];
+    try { window.ExploraPendingDebtRows = activeDebtRows; } catch (_) {}
+    for (const row of activeDebtRows) {
       const at = debtCreatedMs(row) || rowMs(row);
       const remaining = debtRemainingAmount(row);
+      const debtId = debtActivityId(row);
       rows.push({
         at, type:"debt", title:`${dateTimeShort(at)} · ${debtTypeLabel(row)}`,
         meta:safe(row.description || row.descripcion || row.reasonDetail || row.notes || "Pendiente cargado por administrador"),
         detail:`Saldo actual independiente: ${currency(remaining)} · no afecta facturación`,
-        amount:-remaining, negative:true
+        amount:-remaining, negative:true,
+        debtId, hasPhoto: !!(debtId && debtHasAttachment(row))
       });
     }
 
@@ -3345,10 +3360,15 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     list.innerHTML = rows.map(row => {
       const closureAttr = row.type === "closure" && row.closureId ? ` data-pay-activity-closure="${esc(row.closureId)}" role="button" tabindex="0"` : "";
       const closureTone = row.type === "closure" ? ` ${esc(row.tone || "")}` : "";
-      return `<article class="pay-activity ${row.type === "closure" ? "is-clickable" : ""}${closureTone}"${closureAttr}>
+      const photoButton = row.type === "debt" && row.hasPhoto && row.debtId
+        ? `<button class="pay-activity-photo" type="button" data-notification-attachment="${esc(row.debtId)}">ver foto</button>`
+        : "";
+      const photoClass = photoButton ? " has-photo-action" : "";
+      return `<article class="pay-activity ${row.type === "closure" ? "is-clickable" : ""}${closureTone}${photoClass}"${closureAttr}>
         <span class="pay-activity-icon">${activityIcon(row.type)}</span>
         <div><div class="pay-activity-title">${esc(row.title)}</div><div class="pay-activity-meta">${esc(row.meta)}</div><div class="pay-activity-detail">${esc(row.detail)}</div></div>
         <strong class="pay-activity-amount ${row.positive ? "is-positive" : row.negative ? "is-negative" : ""}">${row.amount ? (row.amount > 0 ? "+" : "") + currency(row.amount) : ""}</strong>
+        ${photoButton}
       </article>`;
     }).join("");
   }

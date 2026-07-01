@@ -15,6 +15,7 @@ function normalizedId(row = {}) {
 function findDebtById(id) {
   const wanted = String(id || "");
   return state.rows.find((row) => normalizedId(row) === wanted)
+    || window.ExploraPendingDebtRows?.find?.((row) => normalizedId(row) === wanted)
     || window.ExploraDriverIncidents?.getState?.().rows?.find?.((row) => normalizedId(row) === wanted)
     || window.ExploraDriverIncidents?.getState?.().summary?.normalized?.find?.((row) => normalizedId(row) === wanted)
     || null;
@@ -67,39 +68,17 @@ function compactDate(row = {}) {
 
 function render(rows = []) {
   const box = $("debtNotificationStack");
-  if (!box) return;
 
+  // La campana de Pendientes + la fila normal en Última actividad son el aviso principal.
+  // No mostramos el cartel extra "Pendiente registrado" para evitar duplicar información.
+  // Conservamos state.rows para que el botón pequeño "ver foto" de Última actividad
+  // pueda abrir el comprobante con el mismo modal blanco moderno.
   state.rows = Array.isArray(rows) ? rows : [];
-  const pending = state.rows.filter((row) => (
-    row
-    && row.acknowledgedByDriver !== true
-    && !String(row.status || row.debtStatus || "").toLowerCase().includes("cancel")
-  ));
 
-  box.hidden = !pending.length;
-  box.innerHTML = pending.map((row) => {
-    const id = normalizedId(row);
-    const attachment = firstAttachment(row);
-    const label = row.reasonLabel || row.reason || row.type || "Pendiente";
-    const amount = Number(row.totalAmount || row.amount || row.remainingAmount || row.saldoPendiente || 0);
-    const installmentCount = Number(row.installmentCount || row.cantidadCuotas || 1) || 1;
-    const installmentAmount = Number(row.weeklyInstallmentAmount || row.cuotaSemanal || amount || 0);
-    const dateText = compactDate(row);
-    return `
-      <article class="debt-notification-card debt-notification-card--soft" data-debt-card-id="${esc(id)}">
-        <button class="debt-notification-close" type="button" data-ack-debt="${esc(id)}" aria-label="Cerrar aviso de pendiente">Cerrar</button>
-        <div class="debt-notification-head">
-          <span class="debt-notification-symbol" aria-hidden="true">!</span>
-          <div class="debt-notification-copy">
-            <strong>Pendiente registrado</strong>
-            <span>${esc(label)} · ${money(amount)}</span>
-            <small>${dateText ? `${esc(dateText)} · ` : ""}${installmentCount} pago(s) semanal(es) · Cuota estimada ${money(installmentAmount)}</small>
-            ${row.notes ? `<small>${esc(row.notes)}</small>` : ""}
-          </div>
-        </div>
-        ${attachment ? `<button class="debt-photo-mini" type="button" data-notification-attachment="${esc(id)}">ver foto</button>` : ""}
-      </article>`;
-  }).join("");
+  if (box) {
+    box.hidden = true;
+    box.innerHTML = "";
+  }
 }
 
 function ensurePhotoModal() {
