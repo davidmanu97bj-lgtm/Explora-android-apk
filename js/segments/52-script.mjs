@@ -9,7 +9,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     ranking:true, dailyRanking:true, derivationRanking:true, weeklyClosure:true, weeklyMileage:true
   });
 
-  const VERSION = "explora-pago-home-v49-pendientes-ui-fix";
+  const VERSION = "explora-pago-home-v50-admin-activity-global";
   const AR_TZ = "America/Argentina/Cordoba";
   const EXPLORA_WHATSAPP = "5493757461564";
   const EXPLORA_WHATSAPP_DISPLAY = "+5493757461564";
@@ -20,6 +20,15 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
   const PAY_TAB_ORDER = Object.freeze(["chofer", "explora", "gastos", "caja_chica", "pendientes"]);
   const PAY_TAB_LABELS = Object.freeze({ chofer:"Chofer", explora:"Explora", gastos:"Gastos", caja_chica:"Caja chica", pendientes:"Pendientes" });
   const PAY_TAB_ALERT_ZERO = Object.freeze({ chofer:0, explora:0, gastos:0, caja_chica:0, pendientes:0 });
+  const ADMIN_ACTIVITY_TYPES = Object.freeze([
+    ["", "Todos los tipos"],
+    ["digital", "Comprobante Explora · digital"],
+    ["chofer", "Comprobante chofer"],
+    ["gastos", "Gastos"],
+    ["caja_chica", "Caja chica"],
+    ["pendientes", "Pendientes"],
+    ["cierres", "Cierres"]
+  ]);
   const state = {
     tab:"chofer",
     view:"inicio",
@@ -28,6 +37,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     profile:{},
     selectedDriverUid:"",
     selectedDriverName:"",
+    adminActivityType:"",
     db:null,
     auth:null,
     storage:null,
@@ -609,10 +619,16 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
           <button class="pay-tab" data-pay-tab="caja_chica" type="button" role="tab" aria-selected="false"><span class="pay-tab-label">Caja chica</span><span class="pay-tab-alert-badge" hidden>🛎️ 0</span></button>
           <button class="pay-tab" data-pay-tab="pendientes" type="button" role="tab" aria-selected="false"><span class="pay-tab-label">Pendientes</span><span class="pay-tab-alert-badge" hidden>🛎️ 0</span></button>
         </nav>
-        <section class="pay-admin-driver-picker" id="payAdminDriverPicker" hidden>
-          <label for="payAdminDriverSelect">Seleccionar chofer</label>
-          <select id="payAdminDriverSelect"><option value="">Cargando choferes…</option></select>
-          <small id="payAdminDriverHint">Elegí un chofer para ver sus valores y pedir cierres.</small>
+        <section class="pay-admin-driver-picker pay-admin-activity-filters" id="payAdminDriverPicker" hidden>
+          <div class="pay-admin-filter-field">
+            <label for="payAdminDriverSelect">Filtrar por chofer</label>
+            <select id="payAdminDriverSelect"><option value="">Todos los choferes</option></select>
+          </div>
+          <div class="pay-admin-filter-field">
+            <label for="payAdminTypeSelect">Filtrar por tipo</label>
+            <select id="payAdminTypeSelect"><option value="">Todos los tipos</option></select>
+          </div>
+          <small id="payAdminDriverHint">Vista admin: últimas actividades de todos los choferes en tiempo real.</small>
         </section>
         <section class="pay-main-card" aria-live="polite">
           <div class="pay-main-row">
@@ -772,16 +788,22 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
         registerTabAlertMovements("deudas_choferes", state.debts);
         registerTabAlertMovements("deuda_pagos", state.debtPayments);
       } else if (isAdmin()) {
-        state.records = [];
-        state.expenses = [];
-        state.debts = [];
-        state.debtPayments = [];
-        try {
-          const snap = await getDocs(query(collection(state.db, "cierres_semanales"), limit(250)));
-          state.closures = snap.docs.map(item => ({ id:item.id, ...item.data() })).sort((a,b)=>rowMs(b)-rowMs(a));
-        } catch (_) {
-          state.closures = [];
-        }
+        const [records, expenses, closures, debts, debtPayments] = await Promise.all([
+          getGlobalDocs("billing_records"),
+          getGlobalDocs("gastos"),
+          getGlobalDocs("cierres_semanales"),
+          getGlobalDocs("deudas_choferes"),
+          getGlobalDocs("deuda_pagos")
+        ]);
+        state.records = records.sort((a,b)=>rowMs(b)-rowMs(a));
+        state.expenses = expenses.sort((a,b)=>rowMs(b)-rowMs(a));
+        state.closures = closures.sort((a,b)=>rowMs(b)-rowMs(a));
+        state.debts = debts.sort((a,b)=>debtCreatedMs(b)-debtCreatedMs(a));
+        state.debtPayments = debtPayments.sort((a,b)=>rowMs(b)-rowMs(a));
+        registerTabAlertMovements("billing_records", state.records);
+        registerTabAlertMovements("gastos", state.expenses);
+        registerTabAlertMovements("deudas_choferes", state.debts);
+        registerTabAlertMovements("deuda_pagos", state.debtPayments);
         state.pendingClosure = null;
       }
       state.tab = activeTab;
@@ -824,7 +846,13 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       render();
       scrollActivePayTabIntoView();
     }));
-    document.querySelectorAll("[data-pay-run]").forEach(button => button.addEventListener("click", () => runExistingAction(button.dataset.payRun)));
+    document.querySelectorAll("[data-pay-run]").forEach(button => button.addEventListener("click", () => {
+      if (isAdmin() && button.closest("#payBottomNav")) {
+        showPayView("notificaciones");
+        return;
+      }
+      runExistingAction(button.dataset.payRun);
+    }));
     $("payClosureActionBtn")?.addEventListener("click", () => {
       if (activeClosureKind(state.tab) === "pendientes") {
         openDebtPaymentModal();
@@ -837,6 +865,10 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     });
     $("payEfficiencyBtn")?.addEventListener("click", openEfficiencyModal);
     $("payNavClosure")?.addEventListener("click", () => {
+      if (isAdmin()) {
+        showPayView("mas");
+        return;
+      }
       // Botón inferior "Cierre" = ver/resolver cierres existentes abiertos o historial.
       // NO crea un cierre nuevo. Para crear uno nuevo, usar el botón "Pedir cierre" dentro de cada módulo.
       const pending = pendingClosureRows(notificationDriverUid());
@@ -868,6 +900,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     });
     $("payRefreshBtn")?.addEventListener("click", () => refreshOpenData("manual-refresh"));
     $("payAdminDriverSelect")?.addEventListener("change", event => selectAdminDriver(event.target?.value || ""));
+    $("payAdminTypeSelect")?.addEventListener("change", event => selectAdminActivityType(event.target?.value || ""));
     $("payClosureClose")?.addEventListener("click", closeClosureModal);
     $("payClosureCancel")?.addEventListener("click", closeClosureModal);
     $("payClosureBackdrop")?.addEventListener("click", event => { if (event.target?.id === "payClosureBackdrop") closeClosureModal(); });
@@ -886,8 +919,22 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     $("payProfileBack")?.addEventListener("click", closeDriverProfileModal);
     $("payProfileBackdrop")?.addEventListener("click", event => { if (event.target?.id === "payProfileBackdrop") closeDriverProfileModal(); });
     $("payProfileSave")?.addEventListener("click", saveDriverProfileModal);
-    document.querySelector('[data-pay-nav="inicio"]')?.addEventListener("click", () => showPayView("inicio"));
+    document.querySelector('[data-pay-nav="inicio"]')?.addEventListener("click", () => {
+      if (isAdmin()) {
+        state.adminActivityType = "pendientes";
+        showPayView("inicio");
+        render();
+        setTimeout(() => $("payActivityTitle")?.scrollIntoView({ behavior:"smooth", block:"start" }), 40);
+        return;
+      }
+      showPayView("inicio");
+    });
     document.querySelector('[data-pay-nav="actividad"]')?.addEventListener("click", () => {
+      if (isAdmin()) {
+        showPayView("inicio");
+        runExistingAction("admin-choferes");
+        return;
+      }
       showPayView("inicio");
       setTimeout(() => $("payActivityTitle")?.scrollIntoView({ behavior:"smooth", block:"start" }), 40);
     });
@@ -1378,15 +1425,29 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
   function renderAdminDriverPicker() {
     const picker = $("payAdminDriverPicker");
     const select = $("payAdminDriverSelect");
+    const typeSelect = $("payAdminTypeSelect");
     const hint = $("payAdminDriverHint");
     if (!picker || !select) return;
     picker.hidden = !isAdmin();
     if (!isAdmin()) return;
     const current = safe(state.selectedDriverUid);
-    const options = [`<option value="">Seleccionar chofer…</option>`].concat(state.drivers.map(driver => `<option value="${esc(driver.uid)}">${esc(driver.name)}</option>`));
+    const options = [`<option value="">Todos los choferes</option>`].concat(state.drivers.map(driver => `<option value="${esc(driver.uid)}">${esc(driver.name)}</option>`));
     select.innerHTML = options.join("");
     select.value = current;
-    if (hint) hint.textContent = current ? `Viendo datos abiertos de ${state.selectedDriverName || "chofer seleccionado"}.` : "Hasta seleccionar un chofer, todos los valores se muestran en $0.";
+    if (typeSelect) {
+      typeSelect.innerHTML = ADMIN_ACTIVITY_TYPES.map(([value, label]) => `<option value="${esc(value)}">${esc(label)}</option>`).join("");
+      typeSelect.value = safe(state.adminActivityType);
+    }
+    const typeLabel = ADMIN_ACTIVITY_TYPES.find(([value]) => value === safe(state.adminActivityType))?.[1] || "Todos los tipos";
+    if (hint) hint.textContent = current
+      ? `Vista admin: ${state.selectedDriverName || "chofer seleccionado"} · ${typeLabel}.`
+      : `Vista admin: todos los choferes · ${typeLabel}.`;
+  }
+
+  function selectAdminActivityType(value = "") {
+    const next = safe(value);
+    state.adminActivityType = ADMIN_ACTIVITY_TYPES.some(([key]) => key === next) ? next : "";
+    render();
   }
 
   function selectAdminDriver(uid = "") {
@@ -1444,6 +1505,16 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     return query(col, where("driverUid", "==", uid || getDriverUid()));
   }
 
+  async function getGlobalDocs(collectionName, max = 300) {
+    try {
+      const snap = await getDocs(query(collection(state.db, collectionName), limit(max)));
+      return snap.docs.map(item => ({ id:item.id, ...item.data() }));
+    } catch (error) {
+      console.warn("EXPLORA_PAY_GLOBAL_READ", collectionName, error?.code || error?.message);
+      return [];
+    }
+  }
+
   async function getScopedDocs(collectionName, uid) {
     const fields = ["driverUid", "choferUid", "uid", "ownerUid", "driverId", "choferId", "driver_id", "chofer_id", "userUid", "userId", "createdByUid", "ownerId", "conductorUid", "conductorId", "assignedDriverUid"];
     const map = new Map();
@@ -1461,7 +1532,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       const targetUid = safe(uid || getDriverUid());
       if (!targetUid) {
         return onSnapshot(scopedQuery(collectionName, targetUid), snap => {
-          state[targetArray] = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+          state[targetArray] = snap.docs.map(d => ({ id:d.id, ...d.data() })).sort((a,b)=>rowMs(b)-rowMs(a));
           if (["billing_records", "gastos", "deudas_choferes", "deuda_pagos"].includes(collectionName)) registerTabAlertMovements(collectionName, state[targetArray]);
           render();
         }, error => {
@@ -1512,15 +1583,17 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
         render();
       }).catch(()=>{});
       if (!uid) {
-        state.records = [];
-        state.expenses = [];
-        state.debts = [];
-        state.debtPayments = [];
         state.pendingClosure = null;
-        const unsub = listenCollection("cierres_semanales", "closures", "");
-        if (unsub) state.unsubscribers.push(unsub);
+        const unsubs = [
+          listenCollection("billing_records", "records", ""),
+          listenCollection("gastos", "expenses", ""),
+          listenCollection("cierres_semanales", "closures", ""),
+          listenCollection("deudas_choferes", "debts", ""),
+          listenCollection("deuda_pagos", "debtPayments", "")
+        ].filter(Boolean);
+        state.unsubscribers.push(...unsubs);
         render();
-        console.info("EXPLORA_PAY_REALTIME", VERSION, reason, "admin-global-closures");
+        console.info("EXPLORA_PAY_REALTIME", VERSION, reason, "admin-global-activity");
         return;
       }
     }
@@ -2919,20 +2992,67 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     }
   }
 
+  function driverUidOf(row = {}) {
+    return closureDriverUids(row)[0] || safe(row.driverUid || row.choferUid || row.uid || row.userUid || row.ownerUid);
+  }
+
+  function driverNameForRow(row = {}) {
+    const explicit = safe(row.driverName || row.choferNombre || row.nombreChofer || row.selectedDriverName || row.conductorNombre || row.driverDisplayName || row.nombre || row.name);
+    if (explicit) return explicit;
+    const uid = driverUidOf(row);
+    return state.drivers.find(driver => driver.uid === uid || driver.id === uid)?.name || "Chofer";
+  }
+
+  function adminActivityKind(row = {}) {
+    if (row.type === "expense") return "gastos";
+    if (row.type === "cashbox") return "caja_chica";
+    if (row.type === "debt" || row.type === "debt_payment") return "pendientes";
+    if (row.type === "closure") return "cierres";
+    if (row.type === "payment") return row.method === "cash" ? "chofer" : "digital";
+    return "";
+  }
+
+  function adminActivityMatches(row = {}) {
+    if (!isAdmin()) return true;
+    const type = safe(state.adminActivityType);
+    if (type && adminActivityKind(row) !== type) return false;
+    const filterUid = safe(state.selectedDriverUid);
+    if (!filterUid) return true;
+    return closureDriverUids(row.source || row).includes(filterUid) || driverUidOf(row.source || row) === filterUid;
+  }
+
+  function renderAdminShellState() {
+    const admin = isAdmin();
+    const root = $("exploraPagoDashboard");
+    root?.classList.toggle("is-admin-activity-home", admin);
+    document.body?.classList.toggle("explora-admin-activity-home", admin);
+    document.querySelectorAll("#payBottomNav .pay-nav-btn").forEach(button => {
+      const span = button.querySelector("span:last-child");
+      if (!span) return;
+      if (button.dataset.payNav === "inicio") span.textContent = admin ? "Pendientes" : "Inicio";
+      else if (button.dataset.payNav === "actividad") span.textContent = admin ? "+ Chofer" : "Actividad";
+      else if (button.dataset.payRun === "nuevo-servicio") span.textContent = admin ? "Cierres" : "Cobrar";
+      else if (button.id === "payNavClosure") span.textContent = admin ? "Futuro" : "Cierre";
+    });
+    const title = $("payActivityTitle");
+    if (title) title.textContent = admin ? "Últimas actividades" : "Última actividad";
+  }
+
   function movementRows(summary = computeSummary()) {
     const rows = [];
-    // Última actividad debe ser global e igual en todos los módulos:
-    // cobros + caja chica automática + gastos + cierres, sin filtrar por pestaña.
-    const paymentRows = summary.billingRecords || summary.records || [];
-    const cashboxRows = summary.cashboxRecords || [];
-    const expenseRows = summary.expenses || [];
+    // Chofer: mantiene la lógica del ciclo abierto. Admin: auditoría global en bruto.
+    const adminMode = isAdmin();
+    const paymentRows = adminMode ? (state.records || []) : (summary.billingRecords || summary.records || []);
+    const cashboxRows = adminMode ? (state.records || []).filter(row => methodOf(row) === "cash" && !cashboxIsExcluded(row) && !movementIsDeleted(row)) : (summary.cashboxRecords || []);
+    const expenseRows = adminMode ? (state.expenses || []) : (summary.expenses || []);
 
     for (const row of paymentRows || []) {
+      if (movementIsDeleted(row)) continue;
       const amount = amountOf(row), method = methodOf(row), at = rowMs(row);
       if (!(amount > 0)) continue;
       const cashbox = method === "cash" ? amount * .05 : 0;
       rows.push({
-        at, type:"payment", title:`${dateTimeShort(at)} · ${paymentLabel(method)}`,
+        at, type:"payment", method, source:row, driverName:driverNameForRow(row), title:`${dateTimeShort(at)} · ${paymentLabel(method)}`,
         meta:safe(row.description || row.detalle || row.notes || row.ruta || "Servicio registrado"),
         detail: method === "cash"
           ? `Cobró el chofer en efectivo: ${currency(amount)} · caja chica separada ${currency(cashbox)}`
@@ -2942,11 +3062,12 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     }
 
     for (const row of cashboxRows || []) {
+      if (movementIsDeleted(row)) continue;
       const amount = amountOf(row), at = rowMs(row);
       if (!(amount > 0)) continue;
       const cashbox = amount * .05;
       rows.push({
-        at: at + 1, type:"cashbox", title:`${dateTimeShort(at)} · Caja chica 5%`,
+        at: at + 1, type:"cashbox", source:row, driverName:driverNameForRow(row), title:`${dateTimeShort(at)} · Caja chica 5%`,
         meta:safe(row.description || row.detalle || row.notes || row.ruta || "Generada automáticamente por cobro efectivo"),
         detail:`Caja chica generada solo por efectivo: la tiene el chofer y debe pasarla a Explora`,
         amount:-cashbox, negative:true
@@ -2954,25 +3075,26 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     }
 
     for (const row of expenseRows || []) {
+      if (movementIsDeleted(row)) continue;
       const at = rowMs(row);
       const { amount, driverPart, exploraPart } = expenseParts(row);
       if (!(amount > 0)) continue;
       rows.push({
-        at, type:"expense", title:`${dateTimeShort(at)} · ${expenseTypeLabel(row)}`,
+        at, type:"expense", source:row, driverName:driverNameForRow(row), title:`${dateTimeShort(at)} · ${expenseTypeLabel(row)}`,
         meta:safe(row.notes || row.descripcion || row.description || "Gasto operativo"),
         detail: `Gasto cargado por el chofer: ${currency(amount)} · Explora reintegra ${currency(exploraPart)} · Parte chofer ${currency(driverPart)}`,
         amount:-amount, negative:true
       });
     }
 
-    const activeDebtRows = summarizePendingDebts(state.debts).activeDebts || [];
+    const activeDebtRows = adminMode ? (state.debts || []).filter(row => !movementIsDeleted(row)) : (summarizePendingDebts(state.debts).activeDebts || []);
     try { window.ExploraPendingDebtRows = activeDebtRows; } catch (_) {}
     for (const row of activeDebtRows) {
       const at = debtCreatedMs(row) || rowMs(row);
       const remaining = debtRemainingAmount(row);
       const debtId = debtActivityId(row);
       rows.push({
-        at, type:"debt", title:`${dateTimeShort(at)} · ${debtTypeLabel(row)}`,
+        at, type:"debt", source:row, driverName:driverNameForRow(row), title:`${dateTimeShort(at)} · ${debtTypeLabel(row)}`,
         meta:safe(row.description || row.descripcion || row.reasonDetail || row.notes || "Pendiente cargado por administrador"),
         detail:`Saldo actual independiente: ${currency(remaining)} · no afecta facturación`,
         amount:-remaining, negative:true,
@@ -2981,11 +3103,12 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     }
 
     for (const row of debtPaymentRows(state.debtPayments)) {
+      if (movementIsDeleted(row)) continue;
       const at = rowMs(row);
       const amount = amountOf(row);
       if (!(amount > 0)) continue;
       rows.push({
-        at, type:"debt_payment", title:`${dateTimeShort(at)} · Reducción de deuda`,
+        at, type:"debt_payment", source:row, driverName:driverNameForRow(row), title:`${dateTimeShort(at)} · Reducción de deuda`,
         meta:safe(row.driverName || row.choferNombre || "Comprobante cargado"),
         detail:`Pago aplicado: ${currency(amount)} · saldo nuevo ${currency(row.newBalance || 0)}`,
         amount, positive:true
@@ -2997,17 +3120,18 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
       const closureKind = closureKindOf(row);
       const stateText = closureActivityStateText(row);
       rows.push({
-        at, type:"closure", closureId:safe(row.id || row.closureId), tone:closurePayerClass(row), title:`${dateTimeShort(at)} · ${closureTitle(closureKind)} · ${stateText}`,
+        at, type:"closure", source:row, driverName:driverNameForRow(row), closureId:safe(row.id || row.closureId), tone:closurePayerClass(row), title:`${dateTimeShort(at)} · ${closureTitle(closureKind)} · ${stateText}`,
         meta:closureActivityMeta(row),
         detail:`${closureStatusText(row)} · A rendir: ${currency(row.amountDueFromDriver || 0)} · A cobrar: ${currency(row.amountDueToDriver || 0)}`,
         amount:0
       });
     }
-    return rows.sort((a,b)=>b.at-a.at).slice(0,12);
+    return rows.filter(adminActivityMatches).sort((a,b)=>b.at-a.at).slice(0, adminMode ? 60 : 12);
   }
 
   function render() {
     installShell();
+    renderAdminShellState();
     const summary = computeSummary();
     state.latestSummary = summary;
     state.pendingClosure = pendingClosureFor(getDriverUid(), state.tab);
@@ -3020,7 +3144,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     renderTabAlerts();
     setTimeout(scrollActivePayTabIntoView, 0);
     const greeting = $("payGreeting");
-    if (greeting) greeting.textContent = isAdmin() ? (state.selectedDriverName ? `Chofer, ${displayName()}` : "Seleccionar chofer") : `Hola, ${displayName()}`;
+    if (greeting) greeting.textContent = isAdmin() ? "Admin · últimas actividades" : `Hola, ${displayName()}`;
     renderAdminDriverPicker();
     renderMainCard(summary);
     renderClosureStatus(summary);
@@ -3356,7 +3480,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
     const list = $("payActivityList");
     if (!list) return;
     const rows = movementRows(summary);
-    if (!rows.length) { list.innerHTML = `<div class="pay-activity-empty">Todavía no hay cobros ni gastos en el ciclo abierto.</div>`; return; }
+    if (!rows.length) { list.innerHTML = `<div class="pay-activity-empty">${isAdmin() ? "No hay actividades con esos filtros." : "Todavía no hay cobros ni gastos en el ciclo abierto."}</div>`; return; }
     list.innerHTML = rows.map(row => {
       const closureAttr = row.type === "closure" && row.closureId ? ` data-pay-activity-closure="${esc(row.closureId)}" role="button" tabindex="0"` : "";
       const closureTone = row.type === "closure" ? ` ${esc(row.tone || "")}` : "";
@@ -3364,9 +3488,10 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/f
         ? `<button class="pay-activity-photo" type="button" data-notification-attachment="${esc(row.debtId)}">ver foto</button>`
         : "";
       const photoClass = photoButton ? " has-photo-action" : "";
+      const driverLine = isAdmin() ? `<div class="pay-activity-driver-name">${esc(row.driverName || "Chofer")}</div>` : "";
       return `<article class="pay-activity ${row.type === "closure" ? "is-clickable" : ""}${closureTone}${photoClass}"${closureAttr}>
         <span class="pay-activity-icon">${activityIcon(row.type)}</span>
-        <div><div class="pay-activity-title">${esc(row.title)}</div><div class="pay-activity-meta">${esc(row.meta)}</div><div class="pay-activity-detail">${esc(row.detail)}</div></div>
+        <div>${driverLine}<div class="pay-activity-title">${esc(row.title)}</div><div class="pay-activity-meta">${esc(row.meta)}</div><div class="pay-activity-detail">${esc(row.detail)}</div></div>
         <strong class="pay-activity-amount ${row.positive ? "is-positive" : row.negative ? "is-negative" : ""}">${row.amount ? (row.amount > 0 ? "+" : "") + currency(row.amount) : ""}</strong>
         ${photoButton}
       </article>`;
